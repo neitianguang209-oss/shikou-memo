@@ -145,6 +145,15 @@ export function HomeView({ jump, onJumpConsumed }) {
     });
   }
 
+  // カレンダー(週表示/折りたたみ時)を左右スワイプ: 1週間分だけ前後にずらす
+  function shiftWeek(delta) {
+    setSelectedDateKey((prevKey) => {
+      const d = dateKeyToDate(prevKey);
+      d.setDate(d.getDate() + delta * 7);
+      return toDateKey(d);
+    });
+  }
+
   // メモ一覧(グレーの部分)を左右スワイプ: 1日だけ前後にずらす
   function shiftDay(delta) {
     setSelectedDateKey((prevKey) => {
@@ -217,6 +226,7 @@ export function HomeView({ jump, onJumpConsumed }) {
           expanded=${calendarExpanded}
           onSelectDate=${selectDate}
           onChangeMonth=${changeMonth}
+          onShiftWeek=${shiftWeek}
         />
       </div>
       <div

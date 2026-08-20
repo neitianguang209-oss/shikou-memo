@@ -193,6 +193,27 @@ input, textarea {
   touch-action: pan-y;
 }
 
+.calendar__week-viewport {
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.calendar__week-track {
+  display: flex;
+  width: 300%;
+  will-change: transform;
+}
+
+.calendar__week-page {
+  width: 33.3333%;
+  flex: 0 0 33.3333%;
+  min-width: 0;
+}
+
+.calendar__week-page .calendar__grid {
+  touch-action: auto;
+}
+
 .calendar__cell {
   aspect-ratio: 1 / 1;
   display: flex;
