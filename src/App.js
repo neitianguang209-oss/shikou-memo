@@ -28,8 +28,8 @@ export function App() {
   return html`
     <div class="app">
       <div class="app-body">
-        ${view === 'home' && html`<${HomeView} jump=${homeJump} />`}
-        ${view === 'tags' && html`<${TagsView} onJumpToHome=${jumpToHome} startEditToken=${tagsOpenToken} />`}
+        ${view === 'home' && html`<${HomeView} jump=${homeJump} onJumpConsumed=${() => setHomeJump(null)} />`}
+        ${view === 'tags' && html`<${TagsView} onJumpToHome=${jumpToHome} startEditToken=${tagsOpenToken} onStartEditConsumed=${() => setTagsOpenToken(null)} />`}
         ${view === 'search' && html`<${SearchView} onJumpToHome=${jumpToHome} />`}
         ${view === 'settings' && html`<${SettingsView} onManageTags=${manageTags} />`}
       </div>

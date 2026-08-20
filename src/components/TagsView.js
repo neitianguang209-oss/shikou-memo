@@ -9,13 +9,18 @@ import { ConfirmDialog } from './ConfirmDialog.js';
 const html = htm.bind(React.createElement);
 const UNCLASSIFIED_ID = '__unclassified__';
 
-export function TagsView({ onJumpToHome, startEditToken }) {
+export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed }) {
   const [tags, setTags] = useState([]);
   const [notes, setNotes] = useState([]);
   const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
-    if (startEditToken) setEditMode(true);
+    if (startEditToken) {
+      setEditMode(true);
+      // 消費したら親側のトークンをクリアする。しないと、設定画面から一度でも
+      // 「タグを管理」で開いた後は、以降ずっとこのタブが編集モードで開いてしまう
+      onStartEditConsumed && onStartEditConsumed();
+    }
   }, [startEditToken]);
   const [showCreate, setShowCreate] = useState(false);
   const [editingTag, setEditingTag] = useState(null);

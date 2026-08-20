@@ -8,15 +8,23 @@
   --accent-strong: #5A4A2A;
   --divider: #E5E5E5;
 
-  /* タグカラーパレット(セクション6) */
-  --tag-blue-bg: #DCEAF2;    --tag-blue-fg: #4E7C96;
-  --tag-green-bg: #DEE9DA;   --tag-green-fg: #5E7D57;
-  --tag-lavender-bg: #E4DFEE;--tag-lavender-fg: #6F6490;
-  --tag-apricot-bg: #F6E3CE; --tag-apricot-fg: #9A7345;
-  --tag-pink-bg: #F2DFE0;    --tag-pink-fg: #96666B;
-  --tag-mint-bg: #D9EBE5;    --tag-mint-fg: #4F8175;
-  --tag-sand-bg: #EFE7D5;    --tag-sand-fg: #8A7A4E;
-  --tag-gray-bg: #E6E4E1;    --tag-gray-fg: #77716A;
+  /* タグカラーパレット(15色、色相順)。既存8色(blue/green/lavender/apricot/pink/mint/sand/gray)は
+     すでに使われているタグの色キーなので値を変更しない。新規7色を隙間の色相に追加。 */
+  --tag-coral-bg: #EFDBD4;    --tag-coral-fg: #884E3A;
+  --tag-apricot-bg: #F6E3CE;  --tag-apricot-fg: #9A7345;
+  --tag-sand-bg: #EFE7D5;     --tag-sand-fg: #8A7A4E;
+  --tag-olive-bg: #EAEFD4;    --tag-olive-fg: #7B883A;
+  --tag-green-bg: #DEE9DA;    --tag-green-fg: #5E7D57;
+  --tag-emerald-bg: #D4EFD9;  --tag-emerald-fg: #3A8847;
+  --tag-mint-bg: #D9EBE5;     --tag-mint-fg: #4F8175;
+  --tag-teal-bg: #D4EFEF;     --tag-teal-fg: #3A8888;
+  --tag-blue-bg: #DCEAF2;     --tag-blue-fg: #4E7C96;
+  --tag-sky-bg: #D4DDEF;      --tag-sky-fg: #3A5488;
+  --tag-lavender-bg: #E4DFEE; --tag-lavender-fg: #6F6490;
+  --tag-plum-bg: #EAD4EF;     --tag-plum-fg: #7B3A88;
+  --tag-rose-bg: #EFD4E4;     --tag-rose-fg: #883A67;
+  --tag-pink-bg: #F2DFE0;     --tag-pink-fg: #96666B;
+  --tag-gray-bg: #E6E4E1;     --tag-gray-fg: #77716A;
 }
 
 * { box-sizing: border-box; }
@@ -137,12 +145,33 @@ input, textarea {
   flex-shrink: 0;
 }
 
+.home__header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
 .home__date-heading {
   font-size: 22px;
   color: var(--text);
-  margin: 0 0 12px;
+  margin: 0;
   padding: 0;
-  display: block;
+}
+
+.home__calendar-toggle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-sub);
+  flex-shrink: 0;
+}
+
+.home__calendar-toggle svg {
+  width: 20px;
+  height: 20px;
 }
 
 .calendar__weekdays {

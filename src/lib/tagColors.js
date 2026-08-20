@@ -1,11 +1,19 @@
+// 色相順に並べる(ピッカーで自然な虹色の並びにするため)
 export const TAG_COLORS = [
-  { key: 'blue', name: '水色' },
-  { key: 'green', name: '若葉' },
-  { key: 'lavender', name: '藤' },
+  { key: 'coral', name: '珊瑚' },
   { key: 'apricot', name: '杏' },
-  { key: 'pink', name: '桜' },
-  { key: 'mint', name: '薄荷' },
   { key: 'sand', name: '砂' },
+  { key: 'olive', name: 'オリーブ' },
+  { key: 'green', name: '若葉' },
+  { key: 'emerald', name: 'エメラルド' },
+  { key: 'mint', name: '薄荷' },
+  { key: 'teal', name: '青磁' },
+  { key: 'blue', name: '水色' },
+  { key: 'sky', name: '空' },
+  { key: 'lavender', name: '藤' },
+  { key: 'plum', name: '茄子' },
+  { key: 'rose', name: '紅' },
+  { key: 'pink', name: '桜' },
   { key: 'gray', name: '灰' },
 ];
 

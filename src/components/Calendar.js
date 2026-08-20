@@ -1,6 +1,6 @@
 import htm from 'htm';
 import React, { useRef } from 'react';
-import { toDateKey } from '../lib/format.js';
+import { toDateKey, dateKeyToDate } from '../lib/format.js';
 
 const html = htm.bind(React.createElement);
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -16,11 +16,26 @@ function buildMonthGrid(year, month) {
   return cells;
 }
 
+// 選択中の日を含む週(日曜始まり)の7セルだけを返す
+function buildWeekGrid(selectedDateKey) {
+  const selected = dateKeyToDate(selectedDateKey);
+  const weekStart = new Date(selected);
+  weekStart.setDate(selected.getDate() - selected.getDay());
+  const cells = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    cells.push(d);
+  }
+  return cells;
+}
+
 // year/month: 表示中の月。selectedDateKey: 選択中の日。todayKey: 今日。
-// datesWithNotes: Set<dateKey>. onSelectDate(dateKey). onChangeMonth(deltaMonths).
-export function Calendar({ year, month, selectedDateKey, todayKey, datesWithNotes, onSelectDate, onChangeMonth }) {
+// datesWithNotes: Set<dateKey>。expanded: falseなら選択中の週だけ表示。
+// onSelectDate(dateKey). onChangeMonth(deltaMonths).
+export function Calendar({ year, month, selectedDateKey, todayKey, datesWithNotes, expanded, onSelectDate, onChangeMonth }) {
   const dragRef = useRef(null);
-  const cells = buildMonthGrid(year, month);
+  const cells = expanded === false ? buildWeekGrid(selectedDateKey) : buildMonthGrid(year, month);
 
   function handlePointerDown(e) {
     dragRef.current = { x: e.clientX, y: e.clientY };

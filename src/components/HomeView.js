@@ -5,7 +5,7 @@ import { InputSheet } from './InputSheet.js';
 import { ActionSheet } from './ActionSheet.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import * as db from '../lib/db.js';
-import { formatDateHeading, formatTime, todayDateKey, toDateKey } from '../lib/format.js';
+import { formatDateHeading, formatTime, todayDateKey, toDateKey, dateKeyToDate } from '../lib/format.js';
 import { tagColorVars } from '../lib/tagColors.js';
 
 const html = htm.bind(React.createElement);
@@ -69,11 +69,12 @@ function NoteBubble({ note, tags, highlighted, onTap, onLongPress }) {
   `;
 }
 
-export function HomeView({ jump }) {
+export function HomeView({ jump, onJumpConsumed }) {
   const [selectedDateKey, setSelectedDateKey] = useState(todayDateKey());
   const today = useMemo(() => todayDateKey(), []);
   const initialDate = new Date();
   const [calMonth, setCalMonth] = useState({ year: initialDate.getFullYear(), month: initialDate.getMonth() });
+  const [calendarExpanded, setCalendarExpanded] = useState(true);
   const [notes, setNotes] = useState([]);
   const [tags, setTags] = useState([]);
   const [datesWithNotes, setDatesWithNotes] = useState(new Set());
@@ -81,6 +82,7 @@ export function HomeView({ jump }) {
   const [composer, setComposer] = useState(null); // { mode, dateKey?, note?, initialTagsOpen? }
   const [actionSheetNote, setActionSheetNote] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const notesDragRef = useRef(null);
 
   async function reloadNotes() {
     const list = await db.getNotesByDateKey(selectedDateKey);
@@ -108,7 +110,16 @@ export function HomeView({ jump }) {
     if (!jump) return;
     setSelectedDateKey(jump.dateKey);
     setHighlightedId(jump.noteId || null);
+    // 消費したら親側のjumpをクリアする。しないと、タグ/検索から一度ジャンプした後は
+    // ホームタブを行き来するたびに同じ日付へ再ジャンプし続けてしまう
+    onJumpConsumed && onJumpConsumed();
   }, [jump && jump.token]);
+
+  // 選択中の日付が変わったら、カレンダーに表示する月もそれに追従させる
+  useEffect(() => {
+    const d = dateKeyToDate(selectedDateKey);
+    setCalMonth({ year: d.getFullYear(), month: d.getMonth() });
+  }, [selectedDateKey]);
 
   useEffect(() => {
     if (!highlightedId) return;
@@ -120,15 +131,40 @@ export function HomeView({ jump }) {
 
   function selectDate(dateKey) {
     setSelectedDateKey(dateKey);
-    const d = new Date(dateKey);
-    setCalMonth({ year: d.getFullYear(), month: d.getMonth() });
   }
 
+  // カレンダー(白い部分)を左右スワイプ: 月を移動し、選択中の日付も同じ日番号のまま移動する
   function changeMonth(delta) {
-    setCalMonth((prev) => {
-      const d = new Date(prev.year, prev.month + delta, 1);
-      return { year: d.getFullYear(), month: d.getMonth() };
+    setSelectedDateKey((prevKey) => {
+      const prevDate = dateKeyToDate(prevKey);
+      const day = prevDate.getDate();
+      const target = new Date(prevDate.getFullYear(), prevDate.getMonth() + delta, 1);
+      const daysInTargetMonth = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+      target.setDate(Math.min(day, daysInTargetMonth));
+      return toDateKey(target);
     });
+  }
+
+  // メモ一覧(グレーの部分)を左右スワイプ: 1日だけ前後にずらす
+  function shiftDay(delta) {
+    setSelectedDateKey((prevKey) => {
+      const d = dateKeyToDate(prevKey);
+      d.setDate(d.getDate() + delta);
+      return toDateKey(d);
+    });
+  }
+
+  function handleNotesPointerDown(e) {
+    notesDragRef.current = { x: e.clientX, y: e.clientY };
+  }
+  function handleNotesPointerUp(e) {
+    if (!notesDragRef.current) return;
+    const dx = e.clientX - notesDragRef.current.x;
+    const dy = e.clientY - notesDragRef.current.y;
+    notesDragRef.current = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      shiftDay(dx < 0 ? 1 : -1);
+    }
   }
 
   function jumpToToday() {
@@ -158,20 +194,36 @@ export function HomeView({ jump }) {
   return html`
     <div class="home">
       <div class="home__header">
-        <button class="home__date-heading" onClick=${jumpToToday}>
-          ${formatDateHeading(selectedDateKey)}
-        </button>
+        <div class="home__header-row">
+          <button class="home__date-heading" onClick=${jumpToToday}>
+            ${formatDateHeading(selectedDateKey)}
+          </button>
+          <button
+            class="home__calendar-toggle"
+            onClick=${() => setCalendarExpanded((v) => !v)}
+            aria-label=${calendarExpanded ? 'カレンダーを縮小' : 'カレンダーを拡大'}
+          >
+            ${calendarExpanded
+              ? html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15" /></svg>`
+              : html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>`}
+          </button>
+        </div>
         <${Calendar}
           year=${calMonth.year}
           month=${calMonth.month}
           selectedDateKey=${selectedDateKey}
           todayKey=${today}
           datesWithNotes=${datesWithNotes}
+          expanded=${calendarExpanded}
           onSelectDate=${selectDate}
           onChangeMonth=${changeMonth}
         />
       </div>
-      <div class="home__notes">
+      <div
+        class="home__notes"
+        onPointerDown=${handleNotesPointerDown}
+        onPointerUp=${handleNotesPointerUp}
+      >
         ${notes.map(
           (note) => html`
             <${NoteBubble}
