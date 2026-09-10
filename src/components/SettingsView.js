@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as db from '../lib/db.js';
 import { formatDateHeading } from '../lib/format.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
+import { lastCloudBackupAt } from '../lib/cloudBackup.js';
 
 const html = htm.bind(React.createElement);
 const APP_VERSION = '1.0.0';
@@ -20,6 +21,7 @@ export function SettingsView({ onManageTags }) {
   const [noteCount, setNoteCount] = useState(0);
   const [firstNoteDate, setFirstNoteDate] = useState(null);
   const [lastExportAt, setLastExportAt] = useState(localStorage.getItem(LAST_EXPORT_KEY));
+  const [lastCloudAt] = useState(lastCloudBackupAt());
   const [pendingImportFile, setPendingImportFile] = useState(null);
   const [importError, setImportError] = useState('');
   const fileInputRef = useRef(null);
@@ -104,6 +106,12 @@ export function SettingsView({ onManageTags }) {
             : '一度もバックアップを書き出していません'}
           ${(daysSinceExport === null || daysSinceExport >= 30) &&
           html`<div class="settings-hint--warn">しばらくバックアップを取っていません</div>`}
+        </div>
+
+        <div class="settings-hint">
+          ${lastCloudAt
+            ? `クラウドへの控え: ${formatDate(new Date(lastCloudAt))} (メモを書くたび自動)`
+            : 'クラウドへの控えはまだ送られていません'}
         </div>
 
         <button class="settings-row" onClick=${() => fileInputRef.current.click()}>

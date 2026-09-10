@@ -1,3 +1,5 @@
+import { scheduleCloudBackup, setExporter } from './cloudBackup.js';
+
 const DB_NAME = 'shikou-memo';
 const DB_VERSION = 1;
 
@@ -41,18 +43,21 @@ function wrap(request) {
 export async function addNote(note) {
   const store = await tx('notes', 'readwrite');
   await wrap(store.add(note));
+  scheduleCloudBackup();
   return note;
 }
 
 export async function updateNote(note) {
   const store = await tx('notes', 'readwrite');
   await wrap(store.put(note));
+  scheduleCloudBackup();
   return note;
 }
 
 export async function deleteNote(id) {
   const store = await tx('notes', 'readwrite');
   await wrap(store.delete(id));
+  scheduleCloudBackup();
 }
 
 export async function getNotesByDateKey(dateKey) {
@@ -82,18 +87,21 @@ export async function getDateKeysWithNotes() {
 export async function addTag(tag) {
   const store = await tx('tags', 'readwrite');
   await wrap(store.add(tag));
+  scheduleCloudBackup();
   return tag;
 }
 
 export async function updateTag(tag) {
   const store = await tx('tags', 'readwrite');
   await wrap(store.put(tag));
+  scheduleCloudBackup();
   return tag;
 }
 
 export async function deleteTag(id) {
   const store = await tx('tags', 'readwrite');
   await wrap(store.delete(id));
+  scheduleCloudBackup();
 }
 
 export async function getAllTags() {
@@ -123,7 +131,12 @@ export async function replaceAll({ notes, tags }) {
     tagsStore.add(tag);
   }
   return new Promise((resolve, reject) => {
-    transaction.oncomplete = () => resolve();
+    transaction.oncomplete = () => { scheduleCloudBackup(); resolve(); };
     transaction.onerror = () => reject(transaction.error);
   });
 }
+
+// クラウド控えの書き出し元としてexportAllを登録する。
+// (cloudBackup.js から db.js を import すると循環参照になるため、
+//  ここで関数そのものを渡している)
+setExporter(exportAll);
