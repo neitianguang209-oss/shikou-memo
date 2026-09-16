@@ -1,44 +1,54 @@
-# PWAアイコン生成（Node/Python不要、.NET System.Drawing のみ使用）
+﻿# PWAアイコン生成（Node/Python不要、.NET System.Drawing のみ使用）
 # 使い方: powershell -ExecutionPolicy Bypass -File generate-icons.ps1
+# 読書記録・思考メモ・ほしい/やりたい・就活選考管理の4つで
+# 角丸の形・余白・記号の太さを揃え、色と中の記号だけ変えている。
 Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$accent = [System.Drawing.Color]::FromArgb(255, 0xF5, 0xD6, 0xA0)
-$accentStrong = [System.Drawing.Color]::FromArgb(255, 0x5A, 0x4A, 0x2A)
+
+function P([single]$x, [single]$y) { New-Object System.Drawing.PointF($x, $y) }
+
+function RoundRect($x, $y, $w, $h, $r) {
+  $p = New-Object System.Drawing.Drawing2D.GraphicsPath
+  $d = $r * 2
+  $p.AddArc($x, $y, $d, $d, 180, 90)
+  $p.AddArc($x + $w - $d, $y, $d, $d, 270, 90)
+  $p.AddArc($x + $w - $d, $y + $h - $d, $d, $d, 0, 90)
+  $p.AddArc($x, $y + $h - $d, $d, $d, 90, 90)
+  $p.CloseFigure()
+  return $p
+}
+
+$bg = [System.Drawing.Color]::FromArgb(255, 0xF5, 0xD6, 0xA0)   # --accent
+$fg = [System.Drawing.Color]::FromArgb(255, 0x5A, 0x4A, 0x2A)   # --accent-strong
+
+function Draw-Symbol($g, $size, $brush, $bgBrush) {
+  # 吹き出し（思いついたことを書きとめる）
+  $x = $size * 0.18; $y = $size * 0.25
+  $w = $size * 0.64; $h = $size * 0.40
+  $g.FillPath($brush, (RoundRect $x $y $w $h ($size * 0.11)))
+  $tail = @(
+    (P ($size * 0.31) ($size * 0.60)), (P ($size * 0.31) ($size * 0.79)),
+    (P ($size * 0.48) ($size * 0.63))
+  )
+  $g.FillPolygon($brush, [System.Drawing.PointF[]]$tail)
+}
 
 function New-Icon([int]$size, [string]$path, [bool]$square) {
   $bmp = New-Object System.Drawing.Bitmap($size, $size)
   $g = [System.Drawing.Graphics]::FromImage($bmp)
   $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
 
-  $bgBrush = New-Object System.Drawing.SolidBrush($accent)
+  $bgBrush = New-Object System.Drawing.SolidBrush($bg)
   if ($square) {
+    # iOSのホーム画面は自分で角を丸めるので、apple-touch-icon用は四角のまま
     $g.FillRectangle($bgBrush, 0, 0, $size, $size)
   } else {
-    $radius = [int]($size * 0.22)
-    $path2 = New-Object System.Drawing.Drawing2D.GraphicsPath
-    $d = $radius * 2
-    $path2.AddArc(0, 0, $d, $d, 180, 90)
-    $path2.AddArc($size - $d, 0, $d, $d, 270, 90)
-    $path2.AddArc($size - $d, $size - $d, $d, $d, 0, 90)
-    $path2.AddArc(0, $size - $d, $d, $d, 90, 90)
-    $path2.CloseFigure()
-    $g.FillPath($bgBrush, $path2)
+    $g.FillPath($bgBrush, (RoundRect 0 0 $size $size ([int]($size * 0.22))))
   }
 
-  # 中央に「メモの束」を表す3本の横線
-  $lineBrush = New-Object System.Drawing.SolidBrush($accentStrong)
-  $lineHeight = [Math]::Max(2, [int]($size * 0.045))
-  $lineWidth = [int]($size * 0.46)
-  $x = ($size - $lineWidth) / 2
-  $gap = $size * 0.10
-  $startY = $size * 0.36
-  for ($i = 0; $i -lt 3; $i++) {
-    $w = if ($i -eq 2) { $lineWidth * 0.6 } else { $lineWidth }
-    $y = $startY + ($gap * $i)
-    $rect = New-Object System.Drawing.RectangleF($x, $y, $w, $lineHeight)
-    $g.FillRectangle($lineBrush, $rect)
-  }
+  $fgBrush = New-Object System.Drawing.SolidBrush($fg)
+  Draw-Symbol $g ([single]$size) $fgBrush $bgBrush
 
   $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
   $g.Dispose()
