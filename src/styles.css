@@ -799,3 +799,49 @@ input, textarea {
   color: var(--text-sub);
   font-size: 15px;
 }
+
+/* ---- 読書記録から届いた下書き ---- */
+.inbox-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-strong);
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+}
+
+.inbox-banner__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--bubble);
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.input-sheet__source {
+  font-size: 12px;
+  color: var(--text-sub);
+  padding-bottom: 6px;
+}
+
+.input-sheet__discard {
+  margin-left: 10px;
+  margin-right: auto;
+  padding: 0 6px;
+  font-size: 13px;
+  color: var(--text-sub);
+  font-family: inherit;
+}

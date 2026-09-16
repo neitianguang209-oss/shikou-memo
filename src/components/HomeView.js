@@ -5,8 +5,12 @@ import { InputSheet } from './InputSheet.js';
 import { ActionSheet } from './ActionSheet.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import * as db from '../lib/db.js';
-import { formatDateHeading, formatTime, todayDateKey, toDateKey, dateKeyToDate } from '../lib/format.js';
-import { tagColorVars } from '../lib/tagColors.js';
+import { readInbox, removeFromInbox, sourceLabel } from '../lib/inbox.js';
+import { formatDateHeading, formatTime, todayDateKey, toDateKey, dateKeyToDate, uuid } from '../lib/format.js';
+import { tagColorVars, nextUnusedColor } from '../lib/tagColors.js';
+
+// 読書記録から届いた下書きに自動で付けるタグ
+const READING_TAG_NAME = '読書';
 
 const html = htm.bind(React.createElement);
 
@@ -82,6 +86,8 @@ export function HomeView({ jump, onJumpConsumed }) {
   const [composer, setComposer] = useState(null); // { mode, dateKey?, note?, initialTagsOpen? }
   const [actionSheetNote, setActionSheetNote] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  // 読書記録から届いて、まだ確認していない下書き
+  const [drafts, setDrafts] = useState([]);
   const notesDragRef = useRef(null);
 
   async function reloadNotes() {
@@ -104,6 +110,22 @@ export function HomeView({ jump, onJumpConsumed }) {
   useEffect(() => {
     reloadTags();
     reloadDots();
+  }, []);
+
+  // 読書記録アプリで「日記へ」を押してからこちらに戻ってくる使い方なので、
+  // 起動時だけでなく画面が表に戻るたびに受け取り箱を見に行く
+  useEffect(() => {
+    function refreshDrafts() {
+      if (document.visibilityState === 'hidden') return;
+      setDrafts(readInbox());
+    }
+    refreshDrafts();
+    document.addEventListener('visibilitychange', refreshDrafts);
+    window.addEventListener('focus', refreshDrafts);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshDrafts);
+      window.removeEventListener('focus', refreshDrafts);
+    };
   }, []);
 
   useEffect(() => {
@@ -188,7 +210,53 @@ export function HomeView({ jump, onJumpConsumed }) {
     setComposer({ mode: 'edit', note, initialTagsOpen: !!initialTagsOpen });
   }
 
-  async function handleSaved() {
+  // 「読書」タグは無ければ作る(読書記録から届いたメモの目印)
+  async function ensureReadingTag() {
+    const all = await db.getAllTags();
+    const found = all.find((t) => t.name === READING_TAG_NAME);
+    if (found) return found;
+    const tag = {
+      id: uuid(),
+      name: READING_TAG_NAME,
+      colorKey: nextUnusedColor(all),
+      order: all.length,
+    };
+    await db.addTag(tag);
+    await reloadTags();
+    return tag;
+  }
+
+  async function openDraft(draft) {
+    const tag = await ensureReadingTag();
+    // 書いた日のメモとして残したいので、送られてきた日付を使う
+    const draftDateKey = toDateKey(new Date(draft.createdAt || Date.now()));
+    setComposer({
+      mode: 'create',
+      dateKey: draftDateKey,
+      draftId: draft.id,
+      initialBody: draft.text,
+      initialTagIds: [tag.id],
+      initialTagsOpen: true,
+      sourceLabel: sourceLabel(draft),
+    });
+  }
+
+  function discardDraft(draftId) {
+    removeFromInbox(draftId);
+    setDrafts(readInbox());
+    setComposer(null);
+  }
+
+  async function handleSaved(savedNote) {
+    // 下書きから作ったメモなら、受け取り箱から消して、その日付へ移動して見せる
+    if (composer && composer.draftId) {
+      removeFromInbox(composer.draftId);
+      setDrafts(readInbox());
+      if (savedNote) {
+        setSelectedDateKey(savedNote.dateKey);
+        setHighlightedId(savedNote.id);
+      }
+    }
     await reloadNotes();
     await reloadDots();
   }
@@ -234,6 +302,12 @@ export function HomeView({ jump, onJumpConsumed }) {
         onPointerDown=${handleNotesPointerDown}
         onPointerUp=${handleNotesPointerUp}
       >
+        ${drafts.length > 0 && html`
+          <button class="inbox-banner" onClick=${() => openDraft(drafts[0])}>
+            <span class="inbox-banner__count">${drafts.length}</span>
+            読書記録から届いています
+          </button>
+        `}
         ${notes.map(
           (note) => html`
             <${NoteBubble}
@@ -259,6 +333,11 @@ export function HomeView({ jump, onJumpConsumed }) {
           dateKey=${composer.dateKey}
           note=${composer.note}
           initialTagsOpen=${composer.initialTagsOpen}
+          initialBody=${composer.initialBody}
+          initialTagIds=${composer.initialTagIds}
+          sourceLabel=${composer.sourceLabel}
+          closeAfterSend=${!!composer.draftId}
+          onDiscard=${composer.draftId ? () => discardDraft(composer.draftId) : null}
           allTags=${tags}
           onClose=${() => setComposer(null)}
           onSaved=${handleSaved}

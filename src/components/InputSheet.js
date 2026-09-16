@@ -8,9 +8,16 @@ import { TagEditorModal } from './TagEditorModal.js';
 const html = htm.bind(React.createElement);
 
 // mode: 'create' | 'edit'
-export function InputSheet({ mode, dateKey, note, allTags, initialTagsOpen, onClose, onSaved, onTagsChanged }) {
-  const [body, setBody] = useState(mode === 'edit' ? note.body : '');
-  const [selectedTagIds, setSelectedTagIds] = useState(mode === 'edit' ? [...note.tagIds] : []);
+// initialBody / initialTagIds / sourceLabel / onDiscard / closeAfterSend は
+// 読書記録から届いた下書きを確認してもらうときだけ使う(通常の新規作成では渡さない)
+export function InputSheet({
+  mode, dateKey, note, allTags, initialTagsOpen, onClose, onSaved, onTagsChanged,
+  initialBody, initialTagIds, sourceLabel, onDiscard, closeAfterSend,
+}) {
+  const [body, setBody] = useState(mode === 'edit' ? note.body : (initialBody || ''));
+  const [selectedTagIds, setSelectedTagIds] = useState(
+    mode === 'edit' ? [...note.tagIds] : [...(initialTagIds || [])]
+  );
   const [tagsOpen, setTagsOpen] = useState(!!initialTagsOpen);
   const [showTagCreator, setShowTagCreator] = useState(false);
   const [now, setNow] = useState(() => new Date());
@@ -39,9 +46,15 @@ export function InputSheet({ mode, dateKey, note, allTags, initialTagsOpen, onCl
         tagIds: [...selectedTagIds],
       };
       await db.addNote(newNote);
+      onSaved(newNote);
+      // 下書きの確認はこれで終わりなのでシートを閉じる。
+      // 通常の新規作成は連投できるよう、テキストだけ消してシートを残す
+      if (closeAfterSend) {
+        onClose();
+        return;
+      }
       setBody('');
       setNow(new Date());
-      onSaved();
       textareaRef.current && textareaRef.current.focus();
     } else {
       const updated = {
@@ -51,7 +64,7 @@ export function InputSheet({ mode, dateKey, note, allTags, initialTagsOpen, onCl
         updatedAt: new Date().toISOString(),
       };
       await db.updateNote(updated);
-      onSaved();
+      onSaved(updated);
       onClose();
     }
   }
@@ -77,6 +90,7 @@ export function InputSheet({ mode, dateKey, note, allTags, initialTagsOpen, onCl
           onPointerDown=${handleHandlePointerDown}
           onPointerUp=${handleHandlePointerUp}
         ></div>
+        ${sourceLabel && html`<div class="input-sheet__source">${sourceLabel}</div>`}
         <textarea
           ref=${textareaRef}
           class="input-sheet__textarea"
@@ -108,6 +122,7 @@ export function InputSheet({ mode, dateKey, note, allTags, initialTagsOpen, onCl
         `}
         <div class="input-sheet__footer">
           <span class="input-sheet__datetime">${dateLabel}</span>
+          ${onDiscard && html`<button class="input-sheet__discard" onClick=${onDiscard}>捨てる</button>`}
           <div class="input-sheet__actions">
             <button class="input-sheet__hash" onClick=${() => setTagsOpen((v) => !v)} aria-label="タグ">#</button>
             <button
