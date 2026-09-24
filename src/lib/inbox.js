@@ -22,7 +22,12 @@ export function readInbox() {
     if (!raw) return [];
     const list = JSON.parse(raw);
     if (!Array.isArray(list)) return [];
-    return list.filter(isDraft);
+    const usable = list.filter(isDraft);
+    // 形の壊れた下書きは表示もできず消せもしないので、読んだついでに片付ける
+    if (usable.length !== list.length) {
+      try { localStorage.setItem(INBOX_KEY, JSON.stringify(usable)); } catch (e) { /* 片付けは失敗しても構わない */ }
+    }
+    return usable;
   } catch (e) {
     // 壊れていても空として扱う(アプリを止めない)
     return [];

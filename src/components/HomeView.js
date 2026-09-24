@@ -229,7 +229,8 @@ export function HomeView({ jump, onJumpConsumed }) {
   async function openDraft(draft) {
     const tag = await ensureReadingTag();
     // 書いた日のメモとして残したいので、送られてきた日付を使う
-    const draftDateKey = toDateKey(new Date(draft.createdAt || Date.now()));
+    const sentAt = new Date(draft.createdAt || Date.now());
+    const draftDateKey = toDateKey(isNaN(sentAt.getTime()) ? new Date() : sentAt);
     setComposer({
       mode: 'create',
       dateKey: draftDateKey,
