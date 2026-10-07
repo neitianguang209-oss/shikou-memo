@@ -27,6 +27,16 @@
   <script type="module" src="src/main.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
+      // 新しい版が入ったら、書きかけが無いときだけ読み込み直して新しい版に切り替える
+      // (iPhone のホーム画面アプリは開き直しても古い版のままになりやすいため)
+      var hadController = !!navigator.serviceWorker.controller;
+      var reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!hadController || reloading) return;
+        if (document.querySelector('.overlay')) return;
+        reloading = true;
+        location.reload();
+      });
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(() => {});
       });

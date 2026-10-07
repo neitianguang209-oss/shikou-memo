@@ -3,11 +3,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as db from '../lib/db.js';
 import { formatDateHeading } from '../lib/format.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
-import { lastCloudBackupAt } from '../lib/cloudBackup.js';
+import { syncNow } from '../lib/sync.js';
 
 const html = htm.bind(React.createElement);
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const LAST_EXPORT_KEY = 'shikou-memo:lastExportAt';
+const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function pad2(n) {
   return String(n).padStart(2, '0');
@@ -17,12 +18,38 @@ function formatDate(d) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-export function SettingsView({ onManageTags }) {
+// '10月7日 14:03'
+function formatStamp(ms) {
+  const d = new Date(ms);
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function readLastExport() {
+  try { return localStorage.getItem(LAST_EXPORT_KEY); } catch (e) { return null; }
+}
+
+function syncStatusText(sync) {
+  const waiting = sync.pending > 0 ? `送信待ち ${sync.pending}件` : '';
+  switch (sync.phase) {
+    case 'syncing':
+      return '保存しています…';
+    case 'ok':
+      return waiting || `保存済み（${formatStamp(sync.lastSyncedAt)}）`;
+    case 'offline':
+      return `オフラインです${waiting ? `（${waiting}）` : ''}。電波が戻ると自動で送ります`;
+    case 'error':
+      return `クラウドに届いていません${waiting ? `（${waiting}）` : ''}。自動でやり直します`;
+    default:
+      return sync.lastSyncedAt ? `最終保存 ${formatStamp(sync.lastSyncedAt)}` : '準備しています…';
+  }
+}
+
+export function SettingsView({ onManageTags, dataVersion, sync }) {
   const [noteCount, setNoteCount] = useState(0);
   const [firstNoteDate, setFirstNoteDate] = useState(null);
-  const [lastExportAt, setLastExportAt] = useState(localStorage.getItem(LAST_EXPORT_KEY));
-  const [lastCloudAt] = useState(lastCloudBackupAt());
+  const [lastExportAt, setLastExportAt] = useState(readLastExport());
   const [pendingImportFile, setPendingImportFile] = useState(null);
+  const [importMessage, setImportMessage] = useState('');
   const [importError, setImportError] = useState('');
   const fileInputRef = useRef(null);
 
@@ -39,7 +66,7 @@ export function SettingsView({ onManageTags }) {
 
   useEffect(() => {
     reloadInfo();
-  }, []);
+  }, [dataVersion]);
 
   async function handleExport() {
     const data = await db.exportAll();
@@ -54,7 +81,7 @@ export function SettingsView({ onManageTags }) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     const now = new Date().toISOString();
-    localStorage.setItem(LAST_EXPORT_KEY, now);
+    try { localStorage.setItem(LAST_EXPORT_KEY, now); } catch (e) { /* 表示用なので失敗は無視 */ }
     setLastExportAt(now);
   }
 
@@ -63,28 +90,31 @@ export function SettingsView({ onManageTags }) {
     e.target.value = '';
     if (!file) return;
     setImportError('');
+    setImportMessage('');
     setPendingImportFile(file);
   }
 
   async function handleImportConfirmed() {
+    const file = pendingImportFile;
+    setPendingImportFile(null);
     try {
-      const text = await pendingImportFile.text();
-      const parsed = JSON.parse(text);
-      if (!Array.isArray(parsed.notes) || !Array.isArray(parsed.tags)) {
+      const parsed = JSON.parse(await file.text());
+      if (!parsed || !Array.isArray(parsed.notes)) {
         throw new Error('invalid format');
       }
-      await db.replaceAll({ notes: parsed.notes, tags: parsed.tags });
-      setPendingImportFile(null);
+      const r = await db.importMerge({ notes: parsed.notes, tags: Array.isArray(parsed.tags) ? parsed.tags : [] });
+      const parts = [];
+      if (r.added > 0) parts.push(`${r.added}件を足しました`);
+      if (r.updated > 0) parts.push(`${r.updated}件を新しい内容にしました`);
+      setImportMessage(parts.length > 0 ? parts.join('・') : 'このファイルのメモはすべて入っています');
       await reloadInfo();
     } catch (err) {
-      setImportError('読み込みに失敗しました。ファイルの形式を確認してください。');
-      setPendingImportFile(null);
+      setImportError('読み込めませんでした。思考メモで書き出したファイルか確かめてください。');
     }
   }
 
-  const daysSinceExport = lastExportAt
-    ? Math.floor((Date.now() - new Date(lastExportAt).getTime()) / (1000 * 60 * 60 * 24))
-    : null;
+  const stale = sync.phase !== 'ok' && sync.phase !== 'syncing' &&
+    (!sync.lastSyncedAt || Date.now() - sync.lastSyncedAt > STALE_MS) && noteCount > 0;
 
   return html`
     <div class="settings-view">
@@ -97,21 +127,30 @@ export function SettingsView({ onManageTags }) {
           <span class="settings-row__chevron">›</span>
         </button>
 
+        <div class="settings-row settings-row--static settings-row--sync">
+          <span>クラウドに自動保存</span>
+          <button class="settings-row__link" onClick=${() => syncNow()} disabled=${sync.phase === 'syncing'}>
+            今すぐ同期
+          </button>
+        </div>
+        <div class="settings-hint">
+          <div>${syncStatusText(sync)}</div>
+          <div>書いたメモはクラウドにも自動で保存され、この端末のデータが消えても開けば自動で戻ります。</div>
+          ${sync.memoryOnly && html`
+            <div class="settings-hint--warn">この端末の保存場所が開けないため、いまはクラウドだけに保存しています。アプリを開き直すと直ることがあります。</div>
+          `}
+          ${stale && html`
+            <div class="settings-hint--warn">しばらくクラウドに届いていません。電波のある所で開いてください。</div>
+          `}
+        </div>
+
         <button class="settings-row" onClick=${handleExport}>
           <span>データを書き出す</span>
         </button>
         <div class="settings-hint">
           ${lastExportAt
-            ? `最終書き出し: ${formatDate(new Date(lastExportAt))}`
-            : '一度もバックアップを書き出していません'}
-          ${(daysSinceExport === null || daysSinceExport >= 30) &&
-          html`<div class="settings-hint--warn">しばらくバックアップを取っていません</div>`}
-        </div>
-
-        <div class="settings-hint">
-          ${lastCloudAt
-            ? `クラウドへの控え: ${formatDate(new Date(lastCloudAt))} (メモを書くたび自動)`
-            : 'クラウドへの控えはまだ送られていません'}
+            ? `最終書き出し: ${formatDate(new Date(lastExportAt))}（手元にファイルで控えたいとき用）`
+            : '手元にファイルで控えたいとき用（クラウドへの保存は自動です）'}
         </div>
 
         <button class="settings-row" onClick=${() => fileInputRef.current.click()}>
@@ -120,11 +159,15 @@ export function SettingsView({ onManageTags }) {
         <input
           ref=${fileInputRef}
           type="file"
-          accept="application/json"
+          accept="application/json,.json"
           style=${{ display: 'none' }}
           onChange=${handleFileChosen}
         />
-        ${importError && html`<div class="settings-hint--warn">${importError}</div>`}
+        <div class="settings-hint">
+          書き出したファイルのメモを今のメモに足します（今のメモは消えません）
+          ${importMessage && html`<div class="settings-hint--warn">${importMessage}</div>`}
+          ${importError && html`<div class="settings-hint--warn">${importError}</div>`}
+        </div>
 
         <div class="settings-row settings-row--static">
           <div class="settings-about">
@@ -136,9 +179,8 @@ export function SettingsView({ onManageTags }) {
       </div>
       ${pendingImportFile && html`
         <${ConfirmDialog}
-          message="既存のメモとタグをすべて置き換えて、選んだファイルの内容に復元します。よろしいですか？"
+          message="選んだファイルのメモを、今のメモに足します。今のメモは消えません。同じメモがあれば新しい方を残します。"
           confirmLabel="読み込む"
-          danger=${true}
           onCancel=${() => setPendingImportFile(null)}
           onConfirm=${handleImportConfirmed}
         />

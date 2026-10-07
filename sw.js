@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shikou-memo-v9';
+const CACHE_NAME = 'shikou-memo-v10';
 // self.registration.scope 基準の相対パス（サブパス配信のGitHub Pages等でも動くように）
 const APP_SHELL = [
   './',
@@ -11,7 +11,8 @@ const APP_SHELL = [
   './src/lib/format.js',
   './src/lib/inbox.js',
   './src/lib/tagColors.js',
-  './src/lib/cloudBackup.js',
+  './src/lib/sync.js',
+  './src/lib/memoryDb.js',
   './src/components/BottomNav.js',
   './src/components/Calendar.js',
   './src/components/HomeView.js',
@@ -31,7 +32,11 @@ const INDEX_URL = new URL('./index.html', self.registration.scope).toString();
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      // 公開直後に古いファイルが混ざらないよう、HTTPキャッシュを通さずに取り込む
+      .then((cache) => cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
 });
 

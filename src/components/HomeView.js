@@ -6,6 +6,7 @@ import { ActionSheet } from './ActionSheet.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import * as db from '../lib/db.js';
 import { readInbox, removeFromInbox, sourceLabel } from '../lib/inbox.js';
+import { syncNow } from '../lib/sync.js';
 import { formatDateHeading, formatTime, todayDateKey, toDateKey, dateKeyToDate, uuid } from '../lib/format.js';
 import { tagColorVars, nextUnusedColor } from '../lib/tagColors.js';
 
@@ -73,7 +74,7 @@ function NoteBubble({ note, tags, highlighted, onTap, onLongPress }) {
   `;
 }
 
-export function HomeView({ jump, onJumpConsumed }) {
+export function HomeView({ jump, onJumpConsumed, dataVersion, sync }) {
   const [selectedDateKey, setSelectedDateKey] = useState(todayDateKey());
   const today = useMemo(() => todayDateKey(), []);
   const initialDate = new Date();
@@ -82,6 +83,7 @@ export function HomeView({ jump, onJumpConsumed }) {
   const [notes, setNotes] = useState([]);
   const [tags, setTags] = useState([]);
   const [datesWithNotes, setDatesWithNotes] = useState(new Set());
+  const [dotsLoaded, setDotsLoaded] = useState(false);
   const [highlightedId, setHighlightedId] = useState(null);
   const [composer, setComposer] = useState(null); // { mode, dateKey?, note?, initialTagsOpen? }
   const [actionSheetNote, setActionSheetNote] = useState(null);
@@ -101,16 +103,18 @@ export function HomeView({ jump, onJumpConsumed }) {
 
   async function reloadDots() {
     setDatesWithNotes(await db.getDateKeysWithNotes());
+    setDotsLoaded(true);
   }
 
+  // dataVersion はクラウドから別の端末の変更や復元が届いたときに増える
   useEffect(() => {
     reloadNotes();
-  }, [selectedDateKey]);
+  }, [selectedDateKey, dataVersion]);
 
   useEffect(() => {
     reloadTags();
     reloadDots();
-  }, []);
+  }, [dataVersion]);
 
   // 読書記録アプリで「日記へ」を押してからこちらに戻ってくる使い方なので、
   // 起動時だけでなく画面が表に戻るたびに受け取り箱を見に行く
@@ -303,6 +307,16 @@ export function HomeView({ jump, onJumpConsumed }) {
         onPointerDown=${handleNotesPointerDown}
         onPointerUp=${handleNotesPointerUp}
       >
+        ${dotsLoaded && datesWithNotes.size === 0 && sync && !sync.everSynced && html`
+          <div class="sync-banner" role="status">
+            ${sync.phase === 'offline' || sync.phase === 'error'
+              ? html`
+                  <span>まだクラウドのメモを読み込めていません。電波のある所で開くと自動で戻ります。</span>
+                  <button class="sync-banner__retry" onClick=${() => syncNow()}>もう一度</button>
+                `
+              : html`<span>クラウドからメモを読み込んでいます…</span>`}
+          </div>
+        `}
         ${drafts.length > 0 && html`
           <button class="inbox-banner" onClick=${() => openDraft(drafts[0])}>
             <span class="inbox-banner__count">${drafts.length}</span>

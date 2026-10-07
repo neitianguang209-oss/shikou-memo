@@ -1,5 +1,5 @@
 import htm from 'htm';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import * as db from '../lib/db.js';
 import { formatDateHeading, formatTime } from '../lib/format.js';
 
@@ -20,9 +20,14 @@ function highlightBody(body, query) {
   return html`${before}<span class="search-highlight">${match}</span>${after}`;
 }
 
-export function SearchView({ onJumpToHome }) {
+export function SearchView({ onJumpToHome, dataVersion }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+
+  // クラウドから変更が届いたら、今の検索語で探し直す
+  useEffect(() => {
+    if (query.trim()) handleInput(query);
+  }, [dataVersion]);
 
   async function handleInput(value) {
     setQuery(value);

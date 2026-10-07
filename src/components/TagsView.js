@@ -9,7 +9,7 @@ import { ConfirmDialog } from './ConfirmDialog.js';
 const html = htm.bind(React.createElement);
 const UNCLASSIFIED_ID = '__unclassified__';
 
-export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed }) {
+export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed, dataVersion }) {
   const [tags, setTags] = useState([]);
   const [notes, setNotes] = useState([]);
   const [editMode, setEditMode] = useState(false);
@@ -35,7 +35,7 @@ export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed }) 
 
   useEffect(() => {
     reload();
-  }, []);
+  }, [dataVersion]);
 
   function countFor(tagId) {
     if (tagId === UNCLASSIFIED_ID) {
@@ -61,7 +61,7 @@ export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed }) 
     const remaining = await db.getAllNotes();
     for (const n of remaining) {
       if ((n.tagIds || []).includes(id)) {
-        await db.updateNote({ ...n, tagIds: n.tagIds.filter((t) => t !== id), updatedAt: new Date().toISOString() });
+        await db.updateNote({ ...n, tagIds: n.tagIds.filter((t) => t !== id) });
       }
     }
     setDeleteTarget(null);
