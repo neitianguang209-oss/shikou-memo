@@ -5,13 +5,10 @@ import { InputSheet } from './InputSheet.js';
 import { ActionSheet } from './ActionSheet.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import * as db from '../lib/db.js';
-import { readInbox, removeFromInbox, sourceLabel } from '../lib/inbox.js';
-import { syncNow } from '../lib/sync.js';
-import { formatDateHeading, formatTime, todayDateKey, toDateKey, dateKeyToDate, uuid } from '../lib/format.js';
-import { tagColorVars, nextUnusedColor } from '../lib/tagColors.js';
-
-// 読書記録から届いた下書きに自動で付けるタグ
-const READING_TAG_NAME = '読書';
+import { readInbox, removeFromInbox, sourceLabel, draftBody } from '../lib/inbox.js';
+import { getSyncState, syncNow } from '../lib/sync.js';
+import { formatDateHeading, formatTime, todayDateKey, toDateKey, dateKeyToDate } from '../lib/format.js';
+import { tagColorVars } from '../lib/tagColors.js';
 
 const html = htm.bind(React.createElement);
 
@@ -74,7 +71,7 @@ function NoteBubble({ note, tags, highlighted, onTap, onLongPress }) {
   `;
 }
 
-export function HomeView({ jump, onJumpConsumed, dataVersion, sync }) {
+export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsumed, onToast, dataVersion, sync }) {
   const [selectedDateKey, setSelectedDateKey] = useState(todayDateKey());
   const today = useMemo(() => todayDateKey(), []);
   const initialDate = new Date();
@@ -140,6 +137,13 @@ export function HomeView({ jump, onJumpConsumed, dataVersion, sync }) {
     // ホームタブを行き来するたびに同じ日付へ再ジャンプし続けてしまう
     onJumpConsumed && onJumpConsumed();
   }, [jump && jump.token]);
+
+  // 読書記録の「日記へ」から開かれたら、すぐ今日の入力画面を出す
+  useEffect(() => {
+    if (!incomingDraft) return;
+    openDraft(incomingDraft);
+    onIncomingConsumed && onIncomingConsumed();
+  }, [incomingDraft]);
 
   // 選択中の日付が変わったら、カレンダーに表示する月もそれに追従させる
   useEffect(() => {
@@ -214,36 +218,34 @@ export function HomeView({ jump, onJumpConsumed, dataVersion, sync }) {
     setComposer({ mode: 'edit', note, initialTagsOpen: !!initialTagsOpen });
   }
 
-  // 「読書」タグは無ければ作る(読書記録から届いたメモの目印)
-  async function ensureReadingTag() {
-    const all = await db.getAllTags();
-    const found = all.find((t) => t.name === READING_TAG_NAME);
-    if (found) return found;
-    const tag = {
-      id: uuid(),
-      name: READING_TAG_NAME,
-      colorKey: nextUnusedColor(all),
-      order: all.length,
-    };
-    await db.addTag(tag);
-    await reloadTags();
-    return tag;
-  }
-
-  async function openDraft(draft) {
-    const tag = await ensureReadingTag();
-    // 書いた日のメモとして残したいので、送られてきた日付を使う
-    const sentAt = new Date(draft.createdAt || Date.now());
-    const draftDateKey = toDateKey(isNaN(sentAt.getTime()) ? new Date() : sentAt);
+  // 読書記録から届いた文章を、いつもの入力画面で今日のメモとして開く。
+  // タグ(心がけ・知識など)はここで選んでもらうので、最初から並べておく
+  function openDraft(draft) {
+    const todayKey = todayDateKey();
+    setSelectedDateKey(todayKey);
     setComposer({
       mode: 'create',
-      dateKey: draftDateKey,
+      dateKey: todayKey,
       draftId: draft.id,
-      initialBody: draft.text,
-      initialTagIds: [tag.id],
+      initialBody: draftBody(draft),
+      initialTagIds: [],
       initialTagsOpen: true,
       sourceLabel: sourceLabel(draft),
     });
+  }
+
+  // 読書記録から開かれたときは、この画面をすぐ閉じられても残るよう、その場でクラウドへ送る
+  async function sendDraftNow() {
+    onToast && onToast('日記に入れました。クラウドへ送っています…');
+    await syncNow();
+    let s = getSyncState();
+    // 別の同期の終わりぎわに書いた場合は、まだ送れていないのでもう一度
+    if (s.pending > 0 && s.phase === 'ok') {
+      await syncNow();
+      s = getSyncState();
+    }
+    if (!onToast) return;
+    onToast(s.pending === 0 ? '✓ 日記に入れました' : '日記に入れました。電波が戻ったら自動で送ります');
   }
 
   function discardDraft(draftId) {
@@ -261,6 +263,7 @@ export function HomeView({ jump, onJumpConsumed, dataVersion, sync }) {
         setSelectedDateKey(savedNote.dateKey);
         setHighlightedId(savedNote.id);
       }
+      sendDraftNow();
     }
     await reloadNotes();
     await reloadDots();
@@ -354,6 +357,7 @@ export function HomeView({ jump, onJumpConsumed, dataVersion, sync }) {
           closeAfterSend=${!!composer.draftId}
           onDiscard=${composer.draftId ? () => discardDraft(composer.draftId) : null}
           allTags=${tags}
+          tagsLoading=${tags.length === 0 && !!sync && (sync.phase === 'syncing' || (sync.phase === 'idle' && !sync.everSynced))}
           onClose=${() => setComposer(null)}
           onSaved=${handleSaved}
           onTagsChanged=${reloadTags}

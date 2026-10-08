@@ -6,6 +6,7 @@ import { TagsView } from './components/TagsView.js';
 import { SearchView } from './components/SearchView.js';
 import { SettingsView } from './components/SettingsView.js';
 import { getSyncState, onRemoteData, onSyncState } from './lib/sync.js';
+import { takeLinkedDraft } from './lib/inbox.js';
 
 const html = htm.bind(React.createElement);
 
@@ -19,8 +20,23 @@ export function App() {
   const [dataVersion, setDataVersion] = useState(0);
   const [sync, setSync] = useState(getSyncState());
   const [toast, setToast] = useState('');
+  // 読書記録の「日記へ」からリンクで届いた文章(ホームで今日の入力画面として開く)
+  const [incomingDraft, setIncomingDraft] = useState(null);
 
   useEffect(() => onSyncState(setSync), []);
+
+  // 開いたときと、すでに開いているタブへもう一度送られてきたとき
+  useEffect(() => {
+    function receive() {
+      const draft = takeLinkedDraft();
+      if (!draft) return;
+      setIncomingDraft(draft);
+      setView('home');
+    }
+    receive();
+    window.addEventListener('hashchange', receive);
+    return () => window.removeEventListener('hashchange', receive);
+  }, []);
 
   useEffect(() => onRemoteData((result) => {
     setDataVersion((v) => v + 1);
@@ -48,7 +64,15 @@ export function App() {
   return html`
     <div class="app">
       <div class="app-body">
-        ${view === 'home' && html`<${HomeView} jump=${homeJump} onJumpConsumed=${() => setHomeJump(null)} dataVersion=${dataVersion} sync=${sync} />`}
+        ${view === 'home' && html`<${HomeView}
+          jump=${homeJump}
+          onJumpConsumed=${() => setHomeJump(null)}
+          incomingDraft=${incomingDraft}
+          onIncomingConsumed=${() => setIncomingDraft(null)}
+          onToast=${setToast}
+          dataVersion=${dataVersion}
+          sync=${sync}
+        />`}
         ${view === 'tags' && html`<${TagsView} onJumpToHome=${jumpToHome} startEditToken=${tagsOpenToken} onStartEditConsumed=${() => setTagsOpenToken(null)} dataVersion=${dataVersion} />`}
         ${view === 'search' && html`<${SearchView} onJumpToHome=${jumpToHome} dataVersion=${dataVersion} />`}
         ${view === 'settings' && html`<${SettingsView} onManageTags=${manageTags} dataVersion=${dataVersion} sync=${sync} />`}

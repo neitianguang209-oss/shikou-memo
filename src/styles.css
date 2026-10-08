@@ -837,6 +837,12 @@ input, textarea {
   padding-bottom: 6px;
 }
 
+.input-sheet__tags-loading {
+  font-size: 13px;
+  color: var(--text-sub);
+  padding: 4px 0;
+}
+
 .input-sheet__discard {
   margin-left: 10px;
   margin-right: auto;

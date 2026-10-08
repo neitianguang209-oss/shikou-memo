@@ -11,7 +11,7 @@ const html = htm.bind(React.createElement);
 // initialBody / initialTagIds / sourceLabel / onDiscard / closeAfterSend は
 // 読書記録から届いた下書きを確認してもらうときだけ使う(通常の新規作成では渡さない)
 export function InputSheet({
-  mode, dateKey, note, allTags, initialTagsOpen, onClose, onSaved, onTagsChanged,
+  mode, dateKey, note, allTags, tagsLoading, initialTagsOpen, onClose, onSaved, onTagsChanged,
   initialBody, initialTagIds, sourceLabel, onDiscard, closeAfterSend,
 }) {
   const [body, setBody] = useState(mode === 'edit' ? note.body : (initialBody || ''));
@@ -100,7 +100,9 @@ export function InputSheet({
         ></textarea>
         ${tagsOpen && html`
           <div class="input-sheet__tagrow">
-            ${allTags.length === 0
+            ${allTags.length === 0 && tagsLoading
+              ? html`<span class="input-sheet__tags-loading">タグを読み込んでいます…</span>`
+              : allTags.length === 0
               ? html`
                   <button class="tag-chip tag-chip--outline" onClick=${() => setShowTagCreator(true)}>
                     ＋ タグを作る

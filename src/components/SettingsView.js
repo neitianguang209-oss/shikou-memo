@@ -6,7 +6,7 @@ import { ConfirmDialog } from './ConfirmDialog.js';
 import { syncNow } from '../lib/sync.js';
 
 const html = htm.bind(React.createElement);
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const LAST_EXPORT_KEY = 'shikou-memo:lastExportAt';
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
