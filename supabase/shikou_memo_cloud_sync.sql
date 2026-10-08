@@ -263,6 +263,7 @@ begin
   n := public.shikou_memo_apply(p_changes, left(p_device, 120));
   if n > 0 then
     perform public.shikou_memo_refresh_backup();
+    perform public.shikou_memo_notify();   -- 2026-10-09 追加(下の shikou_memo_notify)
   end if;
   if p_since is null then
     return jsonb_build_object('applied', n);
@@ -331,3 +332,26 @@ revoke delete, truncate on public.app_backups from anon, authenticated;
 --   select public.shikou_memo_apply(public.shikou_memo_changes_from_snapshot('<app_backups の data>'::jsonb), 'restore');
 --   select public.shikou_memo_refresh_backup();
 -- 合言葉のハッシュ: insert into public.shikou_memo_secret (k, v) values ('backup_token_sha256', '<sha256>');
+
+-- ===== 2026-10-09 追加(migration shikou_memo_live_notify) =====
+-- クラウドに変更が入ったら、開いている他の端末へ「変わったよ」とだけ知らせる(Supabase Realtime のブロードキャスト)。
+-- 知らせの中身は rev(番号)だけで本文は載せない。アプリ(src/lib/live.js)は受け取ったらいつもの同期で取りに来る。
+-- 公開チャンネル 'shikou-memo'(private=false)なので、受け取り側にログインは要らない。
+create or replace function public.shikou_memo_notify()
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_catalog
+as $$
+declare
+  v_rev bigint;
+begin
+  select coalesce(max(rev), 0) into v_rev from public.shikou_memo_records;
+  begin
+    perform realtime.send(jsonb_build_object('rev', v_rev), 'changed', 'shikou-memo', false);
+  exception when others then
+    null;   -- 知らせが送れなくても保存は止めない(各端末は開いたとき・2分おきにも見に来る)
+  end;
+end;
+$$;
+revoke all on function public.shikou_memo_notify() from public, anon, authenticated;

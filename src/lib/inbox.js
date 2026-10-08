@@ -38,6 +38,18 @@ export function readInbox() {
   }
 }
 
+// 書いている途中にリンクで届いたときは、書きかけを潰さないよう箱に置いておく
+export function addToInbox(draft) {
+  try {
+    const list = readInbox().filter((d) => d.id !== draft.id);
+    list.push(draft);
+    localStorage.setItem(INBOX_KEY, JSON.stringify(list));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export function removeFromInbox(id) {
   try {
     const rest = readInbox().filter((d) => d.id !== id);
@@ -86,6 +98,8 @@ export function sourceLabel(draft) {
 // メモの本文に入れる形。あとで振り返ったときにどの本か分かるよう、末尾に書名を添える
 // (入力画面で消せる)
 export function draftBody(draft) {
+  // 一度開いて直してから閉じたものは、直した中身のまま戻す
+  if (draft && typeof draft.editedBody === 'string' && draft.editedBody.trim()) return draft.editedBody;
   const s = (draft && draft.source) || {};
   const where = [];
   if (s.title) where.push(`『${s.title}』`);

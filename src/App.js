@@ -1,5 +1,5 @@
 import htm from 'htm';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BottomNav } from './components/BottomNav.js';
 import { HomeView } from './components/HomeView.js';
 import { TagsView } from './components/TagsView.js';
@@ -23,7 +23,14 @@ export function App() {
   // 読書記録の「日記へ」からリンクで届いた文章(ホームで今日の入力画面として開く)
   const [incomingDraft, setIncomingDraft] = useState(null);
 
+  const bodyRef = useRef(null);
+
   useEffect(() => onSyncState(setSync), []);
+
+  // 画面を切り替えたら、前の画面のスクロール位置を持ち越さず上から見せる
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  }, [view]);
 
   // 開いたときと、すでに開いているタブへもう一度送られてきたとき
   useEffect(() => {
@@ -63,7 +70,7 @@ export function App() {
 
   return html`
     <div class="app">
-      <div class="app-body">
+      <div class="app-body" ref=${bodyRef}>
         ${view === 'home' && html`<${HomeView}
           jump=${homeJump}
           onJumpConsumed=${() => setHomeJump(null)}

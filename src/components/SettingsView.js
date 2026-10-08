@@ -6,7 +6,7 @@ import { ConfirmDialog } from './ConfirmDialog.js';
 import { syncNow } from '../lib/sync.js';
 
 const html = htm.bind(React.createElement);
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const LAST_EXPORT_KEY = 'shikou-memo:lastExportAt';
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -134,8 +134,12 @@ export function SettingsView({ onManageTags, dataVersion, sync }) {
           </button>
         </div>
         <div class="settings-hint">
-          <div>${syncStatusText(sync)}</div>
+          <div class="settings-status">
+            <span class=${`settings-status__dot${sync.phase === 'ok' && sync.pending === 0 ? ' is-ok' : ''}`}></span>
+            <span>${syncStatusText(sync)}</span>
+          </div>
           <div>書いたメモはクラウドにも自動で保存され、この端末のデータが消えても開けば自動で戻ります。</div>
+          ${sync.live && html`<div>ほかの端末で書いたメモも、開いているあいだはすぐこちらに届きます。</div>`}
           ${sync.memoryOnly && html`
             <div class="settings-hint--warn">この端末の保存場所が開けないため、いまはクラウドだけに保存しています。アプリを開き直すと直ることがあります。</div>
           `}

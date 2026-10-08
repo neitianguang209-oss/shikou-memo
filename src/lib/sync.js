@@ -10,9 +10,11 @@
 //   どの端末から何が届いても、メモが本当に消えることはない
 //
 // 送るきっかけ: 起動時 / 書いたあと少しして / 画面に戻ったとき / 電波が戻ったとき /
-// 開いている間は2分おき / 画面を離れるとき(送り残しがあれば)
+// 開いている間は2分おき / 画面を離れるとき(送り残しがあれば) /
+// 別の端末で書かれた瞬間(クラウドからの知らせ。live.js)
 
 import * as db from './db.js';
+import { startLive } from './live.js';
 
 const RPC_URL = 'https://gzayrjlhruhvklsidraw.supabase.co/rest/v1/rpc/shikou_memo_sync';
 const API_KEY = 'sb_publishable_-sNQxpwsU7JxhPF9S2vn5A_-CCTqQZL';
@@ -29,6 +31,7 @@ const state = {
   everSynced: false,    // この端末で一度でもクラウドとやりとりできたか
   pending: 0,           // まだクラウドに届いていない変更の数
   error: '',
+  live: false,          // 別の端末の変更を、その場で受け取れる状態か
 };
 
 const stateListeners = new Set();
@@ -193,6 +196,15 @@ function syncIfStale() {
   syncNow();
 }
 
+// クラウドから「変わった」と知らせが来たとき。自分が送った分の知らせ(もう持っている番号)なら取りに行かない
+async function syncIfBehind(rev) {
+  try {
+    const lastRev = await db.getMeta('lastRev');
+    if (typeof rev === 'number' && typeof lastRev === 'number' && rev <= lastRev) return;
+  } catch (e) { /* 分からなければ取りに行く */ }
+  syncNow();
+}
+
 export function startSync() {
   if (started) return;
   started = true;
@@ -221,9 +233,18 @@ export function startSync() {
   });
   window.addEventListener('online', () => syncNow());
   window.addEventListener('focus', syncIfStale);
+  // iPhone で前の画面から戻ったとき(ページが保存から復元された場合)
+  window.addEventListener('pageshow', (e) => { if (e.persisted) syncIfStale(); });
   setInterval(() => {
     if (document.visibilityState === 'visible') syncNow();
   }, POLL_MS);
 
   syncNow();
+
+  startLive({
+    apiKey: API_KEY,
+    onChanged: (rev) => syncIfBehind(rev),
+    onReconnect: () => syncIfStale(),
+    onStatus: (live) => setState({ live }),
+  });
 }

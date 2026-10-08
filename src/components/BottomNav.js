@@ -39,10 +39,11 @@ export function BottomNav({ active, onChange }) {
           <button
             key=${tab.key}
             class=${`bottom-nav__item${active === tab.key ? ' is-active' : ''}`}
-            aria-label=${tab.label}
+            aria-current=${active === tab.key ? 'page' : undefined}
             onClick=${() => onChange(tab.key)}
           >
-            ${ICONS[tab.icon]}
+            <span class="bottom-nav__icon">${ICONS[tab.icon]}</span>
+            <span>${tab.label}</span>
           </button>
         `
       )}

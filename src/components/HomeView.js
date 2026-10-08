@@ -1,22 +1,26 @@
 import htm from 'htm';
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Calendar } from './Calendar.js';
-import { InputSheet } from './InputSheet.js';
+import { InputSheet, readTagsOpenPref } from './InputSheet.js';
 import { ActionSheet } from './ActionSheet.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import * as db from '../lib/db.js';
-import { readInbox, removeFromInbox, sourceLabel, draftBody } from '../lib/inbox.js';
+import { readInbox, addToInbox, removeFromInbox, sourceLabel, draftBody } from '../lib/inbox.js';
+import { readUnsent, writeUnsent, clearUnsent } from '../lib/unsent.js';
 import { getSyncState, syncNow } from '../lib/sync.js';
 import { formatDateHeading, formatTime, todayDateKey, toDateKey, dateKeyToDate } from '../lib/format.js';
 import { tagColorVars } from '../lib/tagColors.js';
 
 const html = htm.bind(React.createElement);
+const LONG_PRESS_MS = 500;
+const PRESS_MOVE_TOLERANCE = 10;
 
 function NoteBubble({ note, tags, highlighted, onTap, onLongPress }) {
   const bodyRef = useRef(null);
   const [isClamped, setIsClamped] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const pressTimer = useRef(null);
+  const press = useRef(null);
+  const suppressClick = useRef(false);
 
   useLayoutEffect(() => {
     const el = bodyRef.current;
@@ -31,6 +35,11 @@ function NoteBubble({ note, tags, highlighted, onTap, onLongPress }) {
     .filter(Boolean);
 
   function handleClick() {
+    // 長押しでメニューを出した直後の指離れは、タップとして扱わない
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
     if (!isExpanded && isClamped) {
       setIsExpanded(true);
       return;
@@ -38,11 +47,32 @@ function NoteBubble({ note, tags, highlighted, onTap, onLongPress }) {
     onTap(note);
   }
 
-  function handlePointerDown() {
-    pressTimer.current = setTimeout(() => onLongPress(note), 500);
-  }
   function clearPress() {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
+    if (press.current) clearTimeout(press.current.timer);
+    press.current = null;
+  }
+  function handlePointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    clearPress();
+    const timer = setTimeout(() => {
+      press.current = null;
+      suppressClick.current = true;
+      onLongPress(note);
+    }, LONG_PRESS_MS);
+    press.current = { timer, x: e.clientX, y: e.clientY };
+  }
+  function handlePointerMove(e) {
+    // スクロールしようとしている指は長押しにしない
+    const p = press.current;
+    if (p && (Math.abs(e.clientX - p.x) > PRESS_MOVE_TOLERANCE || Math.abs(e.clientY - p.y) > PRESS_MOVE_TOLERANCE)) {
+      clearPress();
+    }
+  }
+  function handleContextMenu(e) {
+    // パソコンの右クリックでも同じメニューを出す
+    e.preventDefault();
+    clearPress();
+    onLongPress(note);
   }
 
   return html`
@@ -51,14 +81,21 @@ function NoteBubble({ note, tags, highlighted, onTap, onLongPress }) {
       <div class="note-bubble-col">
         <div
           ref=${bodyRef}
+          role="button"
+          tabindex="0"
           class=${`note-bubble${!isExpanded && isClamped ? ' is-clamped' : ''}${highlighted ? ' is-highlighted' : ''}`}
           onClick=${handleClick}
+          onKeyDown=${(e) => { if (e.key === 'Enter') onTap(note); }}
           onPointerDown=${handlePointerDown}
+          onPointerMove=${handlePointerMove}
           onPointerUp=${clearPress}
           onPointerLeave=${clearPress}
+          onPointerCancel=${clearPress}
+          onContextMenu=${handleContextMenu}
         >
           ${note.body}
         </div>
+        ${!isExpanded && isClamped && html`<button class="note-more" onClick=${() => setIsExpanded(true)}>続きを読む</button>`}
         ${noteTags.length > 0 && html`
           <div class="note-tags">
             ${noteTags.map(
@@ -71,27 +108,40 @@ function NoteBubble({ note, tags, highlighted, onTap, onLongPress }) {
   `;
 }
 
+function syncWaitingText(sync) {
+  if (!sync || sync.pending === 0) return '';
+  if (sync.phase === 'offline') return `未送信 ${sync.pending}件 · 電波が戻ったら自動で送ります`;
+  if (sync.phase === 'error') return `未送信 ${sync.pending}件 · 自動でやり直しています`;
+  return '';
+}
+
 export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsumed, onToast, dataVersion, sync }) {
   const [selectedDateKey, setSelectedDateKey] = useState(todayDateKey());
-  const today = useMemo(() => todayDateKey(), []);
+  const [today, setToday] = useState(todayDateKey());
   const initialDate = new Date();
   const [calMonth, setCalMonth] = useState({ year: initialDate.getFullYear(), month: initialDate.getMonth() });
   const [calendarExpanded, setCalendarExpanded] = useState(true);
   const [notes, setNotes] = useState([]);
+  const [notesLoaded, setNotesLoaded] = useState(false);
   const [tags, setTags] = useState([]);
   const [datesWithNotes, setDatesWithNotes] = useState(new Set());
   const [dotsLoaded, setDotsLoaded] = useState(false);
   const [highlightedId, setHighlightedId] = useState(null);
-  const [composer, setComposer] = useState(null); // { mode, dateKey?, note?, initialTagsOpen? }
+  const [composer, setComposer] = useState(null); // { mode, dateKey?, note?, initialTagsOpen?, draftId?, draftVia? ... }
   const [actionSheetNote, setActionSheetNote] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   // 読書記録から届いて、まだ確認していない下書き
   const [drafts, setDrafts] = useState([]);
   const notesDragRef = useRef(null);
+  const composerRef = useRef(null);
+  composerRef.current = composer;
+  const selectedRef = useRef(selectedDateKey);
+  selectedRef.current = selectedDateKey;
 
   async function reloadNotes() {
     const list = await db.getNotesByDateKey(selectedDateKey);
     setNotes(list);
+    setNotesLoaded(true);
   }
 
   async function reloadTags() {
@@ -114,18 +164,24 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
   }, [dataVersion]);
 
   // 読書記録アプリで「日記へ」を押してからこちらに戻ってくる使い方なので、
-  // 起動時だけでなく画面が表に戻るたびに受け取り箱を見に行く
+  // 起動時だけでなく画面が表に戻るたびに受け取り箱を見に行く。
+  // あわせて、開きっぱなしで日付が変わっていたら「今日」を進める
   useEffect(() => {
-    function refreshDrafts() {
+    function refreshOnReturn() {
       if (document.visibilityState === 'hidden') return;
       setDrafts(readInbox());
+      const nowKey = todayDateKey();
+      setToday((prev) => {
+        if (prev !== nowKey && selectedRef.current === prev) setSelectedDateKey(nowKey);
+        return nowKey;
+      });
     }
-    refreshDrafts();
-    document.addEventListener('visibilitychange', refreshDrafts);
-    window.addEventListener('focus', refreshDrafts);
+    refreshOnReturn();
+    document.addEventListener('visibilitychange', refreshOnReturn);
+    window.addEventListener('focus', refreshOnReturn);
     return () => {
-      document.removeEventListener('visibilitychange', refreshDrafts);
-      window.removeEventListener('focus', refreshDrafts);
+      document.removeEventListener('visibilitychange', refreshOnReturn);
+      window.removeEventListener('focus', refreshOnReturn);
     };
   }, []);
 
@@ -138,11 +194,18 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     onJumpConsumed && onJumpConsumed();
   }, [jump && jump.token]);
 
-  // 読書記録の「日記へ」から開かれたら、すぐ今日の入力画面を出す
+  // 読書記録の「日記へ」から開かれたら、すぐ今日の入力画面を出す。
+  // 書いている途中なら書きかけを潰さないよう、上のお知らせに置いておく
   useEffect(() => {
     if (!incomingDraft) return;
-    openDraft(incomingDraft);
     onIncomingConsumed && onIncomingConsumed();
+    if (composerRef.current) {
+      addToInbox(incomingDraft);
+      setDrafts(readInbox());
+      onToast && onToast('読書記録から届きました。書き終えたら上のお知らせから開けます');
+      return;
+    }
+    openDraft(incomingDraft, 'link');
   }, [incomingDraft]);
 
   // 選択中の日付が変わったら、カレンダーに表示する月もそれに追従させる
@@ -154,8 +217,8 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
   useEffect(() => {
     if (!highlightedId) return;
     const el = document.getElementById(`note-${highlightedId}`);
-    if (el) el.scrollIntoView({ block: 'center' });
-    const timer = setTimeout(() => setHighlightedId(null), 1500);
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const timer = setTimeout(() => setHighlightedId(null), 1800);
     return () => clearTimeout(timer);
   }, [highlightedId, notes]);
 
@@ -201,17 +264,25 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     const dx = e.clientX - notesDragRef.current.x;
     const dy = e.clientY - notesDragRef.current.y;
     notesDragRef.current = null;
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       shiftDay(dx < 0 ? 1 : -1);
     }
   }
 
   function jumpToToday() {
-    selectDate(today);
+    selectDate(todayDateKey());
   }
 
   function openComposer() {
-    setComposer({ mode: 'create', dateKey: selectedDateKey });
+    const unsent = readUnsent();
+    setComposer({
+      mode: 'create',
+      dateKey: selectedDateKey,
+      initialBody: unsent ? unsent.body : '',
+      initialTagIds: unsent ? unsent.tagIds.filter((id) => tags.some((t) => t.id === id)) : [],
+      initialTagsOpen: readTagsOpenPref(),
+      notice: unsent ? '書きかけを戻しました' : '',
+    });
   }
 
   function openEdit(note, initialTagsOpen) {
@@ -219,14 +290,17 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
   }
 
   // 読書記録から届いた文章を、いつもの入力画面で今日のメモとして開く。
-  // タグ(心がけ・知識など)はここで選んでもらうので、最初から並べておく
-  function openDraft(draft) {
+  // タグ(心がけ・知識など)はここで選んでもらうので、最初から並べておく。
+  // via: 'link'(いま「日記へ」で開かれた) | 'inbox'(上のお知らせから開いた)
+  function openDraft(draft, via) {
     const todayKey = todayDateKey();
     setSelectedDateKey(todayKey);
     setComposer({
       mode: 'create',
       dateKey: todayKey,
+      draft,
       draftId: draft.id,
+      draftVia: via,
       initialBody: draftBody(draft),
       initialTagIds: [],
       initialTagsOpen: true,
@@ -234,18 +308,42 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     });
   }
 
+  // 送らずに閉じたとき。ふつうの新規メモは「書きかけ」として覚え、次に＋で戻す。
+  // 読書記録から届いた文章は、直した中身ごと上のお知らせに置いておく(書きかけとは混ぜない)
+  function handleUnsent(body, tagIds) {
+    const c = composerRef.current;
+    if (!c || c.mode !== 'create') return;
+    if (c.draft) {
+      if (body.trim()) {
+        addToInbox({ ...c.draft, editedBody: body });
+        setDrafts(readInbox());
+      }
+      return;
+    }
+    writeUnsent(body, tagIds);
+  }
+
   // 読書記録から開かれたときは、この画面をすぐ閉じられても残るよう、その場でクラウドへ送る
-  async function sendDraftNow() {
+  async function sendDraftNow(noteId) {
     onToast && onToast('日記に入れました。クラウドへ送っています…');
+    // このメモがまだ「送る箱」に残っているか(ほかの未送信分とは分けて見る)
+    async function stillWaiting() {
+      try {
+        const box = await db.getOutbox();
+        return box.some((c) => c.id === noteId);
+      } catch (e) {
+        return getSyncState().pending > 0;
+      }
+    }
     await syncNow();
-    let s = getSyncState();
+    let waiting = await stillWaiting();
     // 別の同期の終わりぎわに書いた場合は、まだ送れていないのでもう一度
-    if (s.pending > 0 && s.phase === 'ok') {
+    if (waiting && getSyncState().phase === 'ok') {
       await syncNow();
-      s = getSyncState();
+      waiting = await stillWaiting();
     }
     if (!onToast) return;
-    onToast(s.pending === 0 ? '✓ 日記に入れました' : '日記に入れました。電波が戻ったら自動で送ります');
+    onToast(waiting ? '日記に入れました。電波が戻ったら自動で送ります' : '✓ 日記に入れました');
   }
 
   function discardDraft(draftId) {
@@ -255,18 +353,30 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
   }
 
   async function handleSaved(savedNote) {
+    const c = composerRef.current;
     // 下書きから作ったメモなら、受け取り箱から消して、その日付へ移動して見せる
-    if (composer && composer.draftId) {
-      removeFromInbox(composer.draftId);
+    if (c && c.draftId) {
+      removeFromInbox(c.draftId);
       setDrafts(readInbox());
       if (savedNote) {
         setSelectedDateKey(savedNote.dateKey);
         setHighlightedId(savedNote.id);
       }
-      sendDraftNow();
+      if (savedNote) sendDraftNow(savedNote.id);
+    } else if (c && c.mode === 'create') {
+      clearUnsent();
     }
     await reloadNotes();
     await reloadDots();
+  }
+
+  async function copyNote(note) {
+    try {
+      await navigator.clipboard.writeText(note.body);
+      onToast && onToast('コピーしました');
+    } catch (e) {
+      onToast && onToast('コピーできませんでした');
+    }
   }
 
   async function handleDeleteConfirmed() {
@@ -276,17 +386,23 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     await reloadDots();
   }
 
+  const isToday = selectedDateKey === today;
+  const waiting = syncWaitingText(sync);
+  const showFirstSync = dotsLoaded && datesWithNotes.size === 0 && sync && !sync.everSynced;
+  const showEmpty = notesLoaded && notes.length === 0 && !showFirstSync;
+
   return html`
     <div class="home">
       <div class="home__header">
         <div class="home__header-row">
-          <button class="home__date-heading" onClick=${jumpToToday}>
+          <button class="home__date-heading" onClick=${jumpToToday} aria-label="今日へ移動">
             ${formatDateHeading(selectedDateKey)}
           </button>
+          ${!isToday && html`<button class="home__today-btn" onClick=${jumpToToday}>今日</button>`}
           <button
             class="home__calendar-toggle"
             onClick=${() => setCalendarExpanded((v) => !v)}
-            aria-label=${calendarExpanded ? 'カレンダーを縮小' : 'カレンダーを拡大'}
+            aria-label=${calendarExpanded ? 'カレンダーを週だけにする' : 'カレンダーを月で表示'}
           >
             ${calendarExpanded
               ? html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15" /></svg>`
@@ -310,7 +426,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
         onPointerDown=${handleNotesPointerDown}
         onPointerUp=${handleNotesPointerUp}
       >
-        ${dotsLoaded && datesWithNotes.size === 0 && sync && !sync.everSynced && html`
+        ${showFirstSync && html`
           <div class="sync-banner" role="status">
             ${sync.phase === 'offline' || sync.phase === 'error'
               ? html`
@@ -320,11 +436,19 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
               : html`<span>クラウドからメモを読み込んでいます…</span>`}
           </div>
         `}
+        ${waiting && html`<div class="sync-pill" role="status">${waiting}</div>`}
         ${drafts.length > 0 && html`
-          <button class="inbox-banner" onClick=${() => openDraft(drafts[0])}>
+          <button class="inbox-banner" onClick=${() => openDraft(drafts[0], 'inbox')}>
             <span class="inbox-banner__count">${drafts.length}</span>
-            読書記録から届いています
+            <span class="inbox-banner__text">読書記録から届いています</span>
+            <span class="inbox-banner__chevron" aria-hidden="true">›</span>
           </button>
+        `}
+        ${showEmpty && html`
+          <div class="home__empty">
+            <div>${isToday ? 'まだ今日のメモはありません' : 'この日のメモはありません'}</div>
+            <div class="home__empty-sub">＋ から書けます</div>
+          </div>
         `}
         ${notes.map(
           (note) => html`
@@ -347,6 +471,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
       </div>
       ${composer && html`
         <${InputSheet}
+          key=${composer.draftId || composer.mode + (composer.note ? composer.note.id : '')}
           mode=${composer.mode}
           dateKey=${composer.dateKey}
           note=${composer.note}
@@ -354,8 +479,10 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
           initialBody=${composer.initialBody}
           initialTagIds=${composer.initialTagIds}
           sourceLabel=${composer.sourceLabel}
+          notice=${composer.notice}
           closeAfterSend=${!!composer.draftId}
           onDiscard=${composer.draftId ? () => discardDraft(composer.draftId) : null}
+          onUnsent=${handleUnsent}
           allTags=${tags}
           tagsLoading=${tags.length === 0 && !!sync && (sync.phase === 'syncing' || (sync.phase === 'idle' && !sync.everSynced))}
           onClose=${() => setComposer(null)}
@@ -369,6 +496,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
           actions=${[
             { label: 'タグを編集', onSelect: () => openEdit(actionSheetNote, true) },
             { label: 'メモを編集', onSelect: () => openEdit(actionSheetNote, false) },
+            { label: 'コピー', onSelect: () => copyNote(actionSheetNote) },
             { label: '削除', danger: true, onSelect: () => setDeleteTarget(actionSheetNote) },
           ]}
         />

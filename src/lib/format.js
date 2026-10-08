@@ -24,6 +24,13 @@ export function formatDateHeading(dateKey) {
   return `${date.getMonth() + 1}月${date.getDate()}日 (${WEEKDAYS[date.getDay()]})`;
 }
 
+// 一覧用: 今年なら '8月20日 (木)'、去年より前なら '2025年8月20日 (水)'
+export function formatDateHeadingWithYear(dateKey) {
+  const date = dateKeyToDate(dateKey);
+  const head = formatDateHeading(dateKey);
+  return date.getFullYear() === new Date().getFullYear() ? head : `${date.getFullYear()}年${head}`;
+}
+
 // '8月28日 07:36'
 export function formatDateTime(dateKey, isoTime) {
   const date = dateKeyToDate(dateKey);
