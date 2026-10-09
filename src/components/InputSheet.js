@@ -1,7 +1,7 @@
 import htm from 'htm';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as db from '../lib/db.js';
-import { formatDateTime, uuid } from '../lib/format.js';
+import { formatDateTime, formatTime, todayDateKey, uuid } from '../lib/format.js';
 import { tagColorVars } from '../lib/tagColors.js';
 import { TagEditorModal } from './TagEditorModal.js';
 import { ActionSheet } from './ActionSheet.js';
@@ -35,6 +35,7 @@ const BOOK_ICON = html`<svg class="input-sheet__source-icon" viewBox="0 0 24 24"
 export function InputSheet({
   mode, dateKey, note, allTags, tagsLoading, initialTagsOpen, onClose, onSaved, onTagsChanged,
   initialBody, initialTagIds, sourceLabel, notice, onDiscard, closeAfterSend, onUnsent,
+  submitLabel, noteExtra,
 }) {
   const startBody = mode === 'edit' ? note.body : (initialBody || '');
   const startTagIds = mode === 'edit' ? [...(note.tagIds || [])] : [...(initialTagIds || [])];
@@ -112,6 +113,7 @@ export function InputSheet({
       if (mode === 'create') {
         const nowIso = new Date().toISOString();
         const newNote = {
+          ...(noteExtra || {}),   // 読書メモから来た印(source)など
           id: uuid(),
           body: trimmed,
           dateKey,
@@ -174,7 +176,9 @@ export function InputSheet({
   }
 
   const dateLabel =
-    mode === 'create' ? formatDateTime(dateKey, now.toISOString()) : formatDateTime(note.dateKey, note.createdAt);
+    mode === 'create'
+      ? (dateKey === todayDateKey() ? `今日 ${formatTime(now.toISOString())}` : formatDateTime(dateKey, now.toISOString()))
+      : formatDateTime(note.dateKey, note.createdAt);
   const selectedTags = selectedTagIds.map((id) => allTags.find((t) => t.id === id)).filter(Boolean);
 
   return html`
@@ -185,7 +189,12 @@ export function InputSheet({
           onPointerDown=${handleHandlePointerDown}
           onPointerUp=${handleHandlePointerUp}
         ></div>
-        ${sourceLabel && html`<div class="input-sheet__source">${BOOK_ICON}<span>${sourceLabel}</span></div>`}
+        ${(sourceLabel || onDiscard) && html`
+          <div class="input-sheet__top">
+            ${sourceLabel && html`<div class="input-sheet__source">${BOOK_ICON}<span>${sourceLabel}</span></div>`}
+            ${onDiscard && html`<button class="input-sheet__discard" onClick=${onDiscard}>捨てる</button>`}
+          </div>
+        `}
         ${notice && showNotice && html`
           <div class="input-sheet__notice">
             <span>${notice}</span>
@@ -234,7 +243,6 @@ export function InputSheet({
             `}
         <div class="input-sheet__footer">
           <span class="input-sheet__datetime">${dateLabel}</span>
-          ${onDiscard && html`<button class="input-sheet__discard" onClick=${onDiscard}>捨てる</button>`}
           <div class="input-sheet__actions">
             <button
               class=${`input-sheet__hash${tagsOpen ? ' is-open' : ''}`}
@@ -243,12 +251,13 @@ export function InputSheet({
               aria-expanded=${tagsOpen}
             >#</button>
             <button
-              class="input-sheet__send"
+              class=${`input-sheet__send${submitLabel ? ' input-sheet__send--label' : ''}`}
               disabled=${!body.trim()}
               onClick=${handleSend}
-              aria-label=${mode === 'create' ? '送信' : '保存'}
+              aria-label=${submitLabel || (mode === 'create' ? '送信' : '保存')}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              ${submitLabel && html`<span>${submitLabel}</span>`}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </button>

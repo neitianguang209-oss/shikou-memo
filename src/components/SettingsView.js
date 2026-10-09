@@ -3,10 +3,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as db from '../lib/db.js';
 import { formatDateHeading } from '../lib/format.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
+import { NoteItem, NOTE_STYLES } from './NoteItem.js';
 import { syncNow } from '../lib/sync.js';
 
 const html = htm.bind(React.createElement);
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const LAST_EXPORT_KEY = 'shikou-memo:lastExportAt';
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -22,6 +23,41 @@ function formatDate(d) {
 function formatStamp(ms) {
   const d = new Date(ms);
   return `${d.getMonth() + 1}月${d.getDate()}日 ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+// 見せ方の見本(実際のメモには触れない)
+const SAMPLE_TAGS = [
+  { id: 'sample-tag-1', name: '発見', colorKey: 'coral' },
+  { id: 'sample-tag-2', name: '心がけ', colorKey: 'apricot' },
+];
+function sampleNotes() {
+  const d = new Date();
+  const at = (h, m) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m).toISOString();
+  return [
+    { id: 'sample-1', body: '朝の散歩で、考えごとは歩きながらの方がまとまると気づいた。', createdAt: at(8, 3), tagIds: ['sample-tag-1'] },
+    {
+      id: 'sample-2',
+      body: '自分が何のために生きるのかを知っていれば、たいていのことは耐えられる。\n\n― 『夜と霧』 p.42',
+      createdAt: at(11, 10),
+      tagIds: ['sample-tag-2'],
+      source: { app: 'reading-log' },
+    },
+  ];
+}
+
+function StylePreview({ style }) {
+  const items = sampleNotes().map(
+    (n) => html`<${NoteItem} key=${n.id} note=${n} tags=${SAMPLE_TAGS} variant=${style} />`
+  );
+  return html`
+    <div class=${`style-preview home__notes--${style}`} aria-hidden="true">
+      ${style === 'timeline'
+        ? html`<div class="tl-list">${items}</div>`
+        : style === 'diary'
+        ? html`<div class="diary-paper">${items}</div>`
+        : items}
+    </div>
+  `;
 }
 
 function readLastExport() {
@@ -44,7 +80,7 @@ function syncStatusText(sync) {
   }
 }
 
-export function SettingsView({ onManageTags, dataVersion, sync }) {
+export function SettingsView({ onManageTags, dataVersion, sync, noteStyle, onChangeNoteStyle }) {
   const [noteCount, setNoteCount] = useState(0);
   const [firstNoteDate, setFirstNoteDate] = useState(null);
   const [lastExportAt, setLastExportAt] = useState(readLastExport());
@@ -122,6 +158,27 @@ export function SettingsView({ onManageTags, dataVersion, sync }) {
         <div class="view-header__title">設定</div>
       </div>
       <div class="settings-list">
+        <div class="settings-card">
+          <div class="settings-card__title">メモの見せ方</div>
+          <div class="segmented" role="radiogroup" aria-label="メモの見せ方">
+            ${NOTE_STYLES.map(
+              (s) => html`
+                <button
+                  key=${s.key}
+                  role="radio"
+                  aria-checked=${noteStyle === s.key}
+                  class=${`segmented__item${noteStyle === s.key ? ' is-active' : ''}`}
+                  onClick=${() => onChangeNoteStyle && onChangeNoteStyle(s.key)}
+                >
+                  ${s.label}
+                </button>
+              `
+            )}
+          </div>
+          <${StylePreview} style=${noteStyle || 'bubble'} />
+        </div>
+        <div class="settings-hint">ホームのメモ一覧の見た目です。この端末だけで切り替わります。</div>
+
         <button class="settings-row" onClick=${onManageTags}>
           <span>タグを管理</span>
           <span class="settings-row__chevron">›</span>

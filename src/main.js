@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import htm from 'htm';
 import { App } from './App.js';
 import { startSync } from './lib/sync.js';
+import { startViewportVars } from './lib/viewport.js';
+
+startViewportVars();
 
 const html = htm.bind(React.createElement);
 

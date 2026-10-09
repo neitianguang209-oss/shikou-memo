@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shikou-memo-v12';
+const CACHE_NAME = 'shikou-memo-v13';
 // self.registration.scope 基準の相対パス（サブパス配信のGitHub Pages等でも動くように）
 const APP_SHELL = [
   './',
@@ -14,11 +14,14 @@ const APP_SHELL = [
   './src/lib/sync.js',
   './src/lib/live.js',
   './src/lib/unsent.js',
+  './src/lib/viewport.js',
+  './src/lib/prefs.js',
   './src/lib/memoryDb.js',
   './src/components/BottomNav.js',
   './src/components/Calendar.js',
   './src/components/HomeView.js',
   './src/components/InputSheet.js',
+  './src/components/NoteItem.js',
   './src/components/TagsView.js',
   './src/components/SearchView.js',
   './src/components/SettingsView.js',

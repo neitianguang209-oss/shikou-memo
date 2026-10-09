@@ -1,112 +1,22 @@
 import htm from 'htm';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar } from './Calendar.js';
 import { InputSheet, readTagsOpenPref } from './InputSheet.js';
+import { NoteItem } from './NoteItem.js';
 import { ActionSheet } from './ActionSheet.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import * as db from '../lib/db.js';
 import { readInbox, addToInbox, removeFromInbox, sourceLabel, draftBody } from '../lib/inbox.js';
 import { readUnsent, writeUnsent, clearUnsent } from '../lib/unsent.js';
 import { getSyncState, syncNow } from '../lib/sync.js';
-import { formatDateHeading, formatTime, todayDateKey, toDateKey, dateKeyToDate } from '../lib/format.js';
-import { tagColorVars } from '../lib/tagColors.js';
+import { formatDateHeading, todayDateKey, toDateKey, dateKeyToDate } from '../lib/format.js';
 
 const html = htm.bind(React.createElement);
-const LONG_PRESS_MS = 500;
-const PRESS_MOVE_TOLERANCE = 10;
+// 上に残る「週の帯」の高さ(測れないときの目安。この分だけ月のカレンダーが隠れたら帯を出す)
+const MINI_BAR_HEIGHT = 104;
 
-function NoteBubble({ note, tags, highlighted, onTap, onLongPress }) {
-  const bodyRef = useRef(null);
-  const [isClamped, setIsClamped] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const press = useRef(null);
-  const suppressClick = useRef(false);
-
-  useLayoutEffect(() => {
-    const el = bodyRef.current;
-    if (!el) return;
-    if (!isExpanded) {
-      setIsClamped(el.scrollHeight > el.clientHeight + 1);
-    }
-  }, [note.body, isExpanded]);
-
-  const noteTags = (note.tagIds || [])
-    .map((id) => tags.find((t) => t.id === id))
-    .filter(Boolean);
-
-  function handleClick() {
-    // 長押しでメニューを出した直後の指離れは、タップとして扱わない
-    if (suppressClick.current) {
-      suppressClick.current = false;
-      return;
-    }
-    if (!isExpanded && isClamped) {
-      setIsExpanded(true);
-      return;
-    }
-    onTap(note);
-  }
-
-  function clearPress() {
-    if (press.current) clearTimeout(press.current.timer);
-    press.current = null;
-  }
-  function handlePointerDown(e) {
-    if (e.button !== undefined && e.button !== 0) return;
-    clearPress();
-    const timer = setTimeout(() => {
-      press.current = null;
-      suppressClick.current = true;
-      onLongPress(note);
-    }, LONG_PRESS_MS);
-    press.current = { timer, x: e.clientX, y: e.clientY };
-  }
-  function handlePointerMove(e) {
-    // スクロールしようとしている指は長押しにしない
-    const p = press.current;
-    if (p && (Math.abs(e.clientX - p.x) > PRESS_MOVE_TOLERANCE || Math.abs(e.clientY - p.y) > PRESS_MOVE_TOLERANCE)) {
-      clearPress();
-    }
-  }
-  function handleContextMenu(e) {
-    // パソコンの右クリックでも同じメニューを出す
-    e.preventDefault();
-    clearPress();
-    onLongPress(note);
-  }
-
-  return html`
-    <div class="note-row" id=${`note-${note.id}`}>
-      <span class="note-time">${formatTime(note.createdAt)}</span>
-      <div class="note-bubble-col">
-        <div
-          ref=${bodyRef}
-          role="button"
-          tabindex="0"
-          class=${`note-bubble${!isExpanded && isClamped ? ' is-clamped' : ''}${highlighted ? ' is-highlighted' : ''}`}
-          onClick=${handleClick}
-          onKeyDown=${(e) => { if (e.key === 'Enter') onTap(note); }}
-          onPointerDown=${handlePointerDown}
-          onPointerMove=${handlePointerMove}
-          onPointerUp=${clearPress}
-          onPointerLeave=${clearPress}
-          onPointerCancel=${clearPress}
-          onContextMenu=${handleContextMenu}
-        >
-          ${note.body}
-        </div>
-        ${!isExpanded && isClamped && html`<button class="note-more" onClick=${() => setIsExpanded(true)}>続きを読む</button>`}
-        ${noteTags.length > 0 && html`
-          <div class="note-tags">
-            ${noteTags.map(
-              (t) => html`<span class="tag-chip" key=${t.id} style=${tagColorVars(t.colorKey)}>#${t.name}</span>`
-            )}
-          </div>
-        `}
-      </div>
-    </div>
-  `;
-}
+const CHEVRON_UP = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15" /></svg>`;
+const CHEVRON_DOWN = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>`;
 
 function syncWaitingText(sync) {
   if (!sync || sync.pending === 0) return '';
@@ -115,7 +25,7 @@ function syncWaitingText(sync) {
   return '';
 }
 
-export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsumed, onToast, dataVersion, sync }) {
+export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsumed, onToast, dataVersion, sync, noteStyle }) {
   const [selectedDateKey, setSelectedDateKey] = useState(todayDateKey());
   const [today, setToday] = useState(todayDateKey());
   const initialDate = new Date();
@@ -124,19 +34,32 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
   const [notes, setNotes] = useState([]);
   const [notesLoaded, setNotesLoaded] = useState(false);
   const [tags, setTags] = useState([]);
-  const [datesWithNotes, setDatesWithNotes] = useState(new Set());
+  // 日付 → その日のメモの先頭タグ(書いた順。タグなしは null)。カレンダーの色の点に使う
+  const [dayTagIds, setDayTagIds] = useState(new Map());
   const [dotsLoaded, setDotsLoaded] = useState(false);
   const [highlightedId, setHighlightedId] = useState(null);
   const [composer, setComposer] = useState(null); // { mode, dateKey?, note?, initialTagsOpen?, draftId?, draftVia? ... }
   const [actionSheetNote, setActionSheetNote] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  // 読書記録から届いて、まだ確認していない下書き
+  // 読書メモから届いて、まだ確認していない下書き
   const [drafts, setDrafts] = useState([]);
+  // 月のカレンダーが上に流れて見えなくなったら、週の帯を上に出す
+  const [compact, setCompact] = useState(false);
+  // メモが少ない日でも、週の帯の位置までスクロールできるだけの高さをメモ欄に持たせる
+  const [notesMinHeight, setNotesMinHeight] = useState(0);
   const notesDragRef = useRef(null);
   const composerRef = useRef(null);
   composerRef.current = composer;
   const selectedRef = useRef(selectedDateKey);
   selectedRef.current = selectedDateKey;
+  const headerRef = useRef(null);
+  const compactRef = useRef(false);
+  const miniBarRef = useRef(null);
+  compactRef.current = compact;
+
+  function miniHeight() {
+    return (miniBarRef.current && miniBarRef.current.offsetHeight) || MINI_BAR_HEIGHT;
+  }
 
   async function reloadNotes() {
     const list = await db.getNotesByDateKey(selectedDateKey);
@@ -149,9 +72,33 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
   }
 
   async function reloadDots() {
-    setDatesWithNotes(await db.getDateKeysWithNotes());
+    const all = await db.getAllNotes();
+    all.sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+    const map = new Map();
+    for (const n of all) {
+      const list = map.get(n.dateKey) || [];
+      list.push((n.tagIds && n.tagIds[0]) || null);
+      map.set(n.dateKey, list);
+    }
+    setDayTagIds(map);
     setDotsLoaded(true);
   }
+
+  // 日付 → 点の色(重ならないように最大3つ)
+  const dayDots = useMemo(() => {
+    const colorOf = new Map(tags.map((t) => [t.id, t.colorKey]));
+    const out = new Map();
+    for (const [key, ids] of dayTagIds) {
+      const colors = [];
+      for (const id of ids) {
+        const c = (id && colorOf.get(id)) || null;
+        if (!colors.includes(c)) colors.push(c);
+        if (colors.length >= 3) break;
+      }
+      out.set(key, colors);
+    }
+    return out;
+  }, [dayTagIds, tags]);
 
   // dataVersion はクラウドから別の端末の変更や復元が届いたときに増える
   useEffect(() => {
@@ -163,7 +110,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     reloadDots();
   }, [dataVersion]);
 
-  // 読書記録アプリで「日記へ」を押してからこちらに戻ってくる使い方なので、
+  // 読書メモで「日記へ」を押してからこちらに戻ってくる使い方なので、
   // 起動時だけでなく画面が表に戻るたびに受け取り箱を見に行く。
   // あわせて、開きっぱなしで日付が変わっていたら「今日」を進める
   useEffect(() => {
@@ -185,6 +132,41 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     };
   }, []);
 
+  // スクロールに合わせて、週の帯を出し入れする
+  useEffect(() => {
+    const scroller = document.querySelector('.app-body');
+    if (!scroller) return;
+    let frame = 0;
+    function check() {
+      frame = 0;
+      const header = headerRef.current;
+      if (!header) return;
+      const bottom = header.getBoundingClientRect().bottom - scroller.getBoundingClientRect().top;
+      setCompact(bottom < miniHeight());
+      setNotesMinHeight(Math.max(0, scroller.clientHeight - miniHeight() + 12));
+    }
+    function onScroll() {
+      if (!frame) frame = requestAnimationFrame(check);
+    }
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    check();
+    return () => {
+      scroller.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  // 週の帯が出ているときに日付を変えたら、その日のメモの頭から見せる
+  useEffect(() => {
+    if (!compactRef.current) return;
+    const scroller = document.querySelector('.app-body');
+    const header = headerRef.current;
+    if (!scroller || !header) return;
+    scroller.scrollTop = Math.max(0, header.offsetHeight - miniHeight() + 8);
+  }, [selectedDateKey]);
+
   useEffect(() => {
     if (!jump) return;
     setSelectedDateKey(jump.dateKey);
@@ -194,7 +176,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     onJumpConsumed && onJumpConsumed();
   }, [jump && jump.token]);
 
-  // 読書記録の「日記へ」から開かれたら、すぐ今日の入力画面を出す。
+  // 読書メモの「日記へ」から開かれたら、すぐ今日の入力画面を出す。
   // 書いている途中なら書きかけを潰さないよう、上のお知らせに置いておく
   useEffect(() => {
     if (!incomingDraft) return;
@@ -202,7 +184,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     if (composerRef.current) {
       addToInbox(incomingDraft);
       setDrafts(readInbox());
-      onToast && onToast('読書記録から届きました。書き終えたら上のお知らせから開けます');
+      onToast && onToast('読書メモから届きました。書き終えたら上のお知らせから開けます');
       return;
     }
     openDraft(incomingDraft, 'link');
@@ -247,7 +229,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     });
   }
 
-  // メモ一覧(グレーの部分)を左右スワイプ: 1日だけ前後にずらす
+  // メモ一覧(地色の部分)を左右スワイプ: 1日だけ前後にずらす
   function shiftDay(delta) {
     setSelectedDateKey((prevKey) => {
       const d = dateKeyToDate(prevKey);
@@ -273,6 +255,11 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     selectDate(todayDateKey());
   }
 
+  function scrollToTop() {
+    const scroller = document.querySelector('.app-body');
+    if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function openComposer() {
     const unsent = readUnsent();
     setComposer({
@@ -289,11 +276,12 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     setComposer({ mode: 'edit', note, initialTagsOpen: !!initialTagsOpen });
   }
 
-  // 読書記録から届いた文章を、いつもの入力画面で今日のメモとして開く。
+  // 読書メモから届いた文章を、いつもの入力画面で今日のメモとして開く。
   // タグ(心がけ・知識など)はここで選んでもらうので、最初から並べておく。
   // via: 'link'(いま「日記へ」で開かれた) | 'inbox'(上のお知らせから開いた)
   function openDraft(draft, via) {
     const todayKey = todayDateKey();
+    const s = draft.source || {};
     setSelectedDateKey(todayKey);
     setComposer({
       mode: 'create',
@@ -305,11 +293,23 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
       initialTagIds: [],
       initialTagsOpen: true,
       sourceLabel: sourceLabel(draft),
+      submitLabel: '日記に入れる',
+      // 保存したメモに「読書メモから」の印として残す
+      noteExtra: {
+        source: {
+          app: 'reading-log',
+          bookId: s.bookId || null,
+          title: s.title || '',
+          author: s.author || '',
+          page: s.page || '',
+          field: s.field || '',
+        },
+      },
     });
   }
 
   // 送らずに閉じたとき。ふつうの新規メモは「書きかけ」として覚え、次に＋で戻す。
-  // 読書記録から届いた文章は、直した中身ごと上のお知らせに置いておく(書きかけとは混ぜない)
+  // 読書メモから届いた文章は、直した中身ごと上のお知らせに置いておく(書きかけとは混ぜない)
   function handleUnsent(body, tagIds) {
     const c = composerRef.current;
     if (!c || c.mode !== 'create') return;
@@ -323,7 +323,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     writeUnsent(body, tagIds);
   }
 
-  // 読書記録から開かれたときは、この画面をすぐ閉じられても残るよう、その場でクラウドへ送る
+  // 読書メモから開かれたときは、この画面をすぐ閉じられても残るよう、その場でクラウドへ送る
   async function sendDraftNow(noteId) {
     onToast && onToast('日記に入れました。クラウドへ送っています…');
     // このメモがまだ「送る箱」に残っているか(ほかの未送信分とは分けて見る)
@@ -361,8 +361,8 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
       if (savedNote) {
         setSelectedDateKey(savedNote.dateKey);
         setHighlightedId(savedNote.id);
+        sendDraftNow(savedNote.id);
       }
-      if (savedNote) sendDraftNow(savedNote.id);
     } else if (c && c.mode === 'create') {
       clearUnsent();
     }
@@ -388,12 +388,51 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
 
   const isToday = selectedDateKey === today;
   const waiting = syncWaitingText(sync);
-  const showFirstSync = dotsLoaded && datesWithNotes.size === 0 && sync && !sync.everSynced;
+  const showFirstSync = dotsLoaded && dayTagIds.size === 0 && sync && !sync.everSynced;
   const showEmpty = notesLoaded && notes.length === 0 && !showFirstSync;
+  const variant = noteStyle || 'bubble';
+
+  const items = notes.map(
+    (note) => html`
+      <${NoteItem}
+        key=${note.id}
+        note=${note}
+        tags=${tags}
+        variant=${variant}
+        highlighted=${highlightedId === note.id}
+        onTap=${(n) => openEdit(n, false)}
+        onLongPress=${(n) => setActionSheetNote(n)}
+      />
+    `
+  );
 
   return html`
     <div class="home">
-      <div class="home__header">
+      <div class="home__mini" aria-hidden=${!compact}>
+        <div class=${`home__mini-bar${compact ? ' is-visible' : ''}`} ref=${miniBarRef}>
+          <div class="home__mini-row">
+            <button class="home__mini-date" onClick=${scrollToTop} tabIndex=${compact ? 0 : -1}>
+              ${formatDateHeading(selectedDateKey)}
+            </button>
+            ${!isToday && html`<button class="home__today-btn" onClick=${jumpToToday} tabIndex=${compact ? 0 : -1}>今日</button>`}
+            <button class="home__calendar-toggle" onClick=${scrollToTop} aria-label="月のカレンダーを出す" tabIndex=${compact ? 0 : -1}>
+              ${CHEVRON_DOWN}
+            </button>
+          </div>
+          <${Calendar}
+            year=${calMonth.year}
+            month=${calMonth.month}
+            selectedDateKey=${selectedDateKey}
+            todayKey=${today}
+            dayDots=${dayDots}
+            expanded=${false}
+            onSelectDate=${selectDate}
+            onChangeMonth=${changeMonth}
+            onShiftWeek=${shiftWeek}
+          />
+        </div>
+      </div>
+      <div class="home__header" ref=${headerRef}>
         <div class="home__header-row">
           <button class="home__date-heading" onClick=${jumpToToday} aria-label="今日へ移動">
             ${formatDateHeading(selectedDateKey)}
@@ -404,9 +443,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
             onClick=${() => setCalendarExpanded((v) => !v)}
             aria-label=${calendarExpanded ? 'カレンダーを週だけにする' : 'カレンダーを月で表示'}
           >
-            ${calendarExpanded
-              ? html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15" /></svg>`
-              : html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>`}
+            ${calendarExpanded ? CHEVRON_UP : CHEVRON_DOWN}
           </button>
         </div>
         <${Calendar}
@@ -414,7 +451,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
           month=${calMonth.month}
           selectedDateKey=${selectedDateKey}
           todayKey=${today}
-          datesWithNotes=${datesWithNotes}
+          dayDots=${dayDots}
           expanded=${calendarExpanded}
           onSelectDate=${selectDate}
           onChangeMonth=${changeMonth}
@@ -422,7 +459,8 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
         />
       </div>
       <div
-        class="home__notes"
+        class=${`home__notes home__notes--${variant}`}
+        style=${notesMinHeight ? { minHeight: `${notesMinHeight}px` } : null}
         onPointerDown=${handleNotesPointerDown}
         onPointerUp=${handleNotesPointerUp}
       >
@@ -440,7 +478,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
         ${drafts.length > 0 && html`
           <button class="inbox-banner" onClick=${() => openDraft(drafts[0], 'inbox')}>
             <span class="inbox-banner__count">${drafts.length}</span>
-            <span class="inbox-banner__text">読書記録から届いています</span>
+            <span class="inbox-banner__text">読書メモから届いています</span>
             <span class="inbox-banner__chevron" aria-hidden="true">›</span>
           </button>
         `}
@@ -450,18 +488,11 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
             <div class="home__empty-sub">＋ から書けます</div>
           </div>
         `}
-        ${notes.map(
-          (note) => html`
-            <${NoteBubble}
-              key=${note.id}
-              note=${note}
-              tags=${tags}
-              highlighted=${highlightedId === note.id}
-              onTap=${(n) => openEdit(n, false)}
-              onLongPress=${(n) => setActionSheetNote(n)}
-            />
-          `
-        )}
+        ${notes.length > 0 && (variant === 'timeline'
+          ? html`<div class="tl-list">${items}</div>`
+          : variant === 'diary'
+          ? html`<div class="diary-paper">${items}</div>`
+          : items)}
         <button class="fab" onClick=${openComposer} aria-label="メモを追加">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="12" y1="5" x2="12" y2="19" />
@@ -480,6 +511,8 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
           initialTagIds=${composer.initialTagIds}
           sourceLabel=${composer.sourceLabel}
           notice=${composer.notice}
+          submitLabel=${composer.submitLabel}
+          noteExtra=${composer.noteExtra}
           closeAfterSend=${!!composer.draftId}
           onDiscard=${composer.draftId ? () => discardDraft(composer.draftId) : null}
           onUnsent=${handleUnsent}

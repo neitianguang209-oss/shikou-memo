@@ -1,6 +1,7 @@
 import htm from 'htm';
 import React, { useRef, useState } from 'react';
 import { toDateKey, dateKeyToDate } from '../lib/format.js';
+import { tagColorVars } from '../lib/tagColors.js';
 
 const html = htm.bind(React.createElement);
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -31,17 +32,21 @@ function buildWeekGrid(selectedDateKey, weekOffset = 0) {
   return cells;
 }
 
-function renderCells(cells, { selectedDateKey, todayKey, datesWithNotes, onSelectDate }) {
+// dayDots: Map<dateKey, (タグの色キー | null)[]>。その日のメモのタグ色を最大3つ点で出す(タグなしは灰色)
+function renderCells(cells, { selectedDateKey, todayKey, dayDots, onSelectDate }) {
   return cells.map((date, i) => {
     if (!date) return html`<div class="calendar__cell" key=${`empty-${i}`}></div>`;
     const dateKey = toDateKey(date);
     const isToday = dateKey === todayKey;
     const isSelected = dateKey === selectedDateKey;
-    const hasNote = datesWithNotes.has(dateKey);
+    const dots = (dayDots && dayDots.get(dateKey)) || [];
+    const weekday = date.getDay();
     const circleClass = [
       'calendar__day-circle',
       isSelected ? 'is-selected' : '',
       !isSelected && isToday ? 'is-today' : '',
+      weekday === 0 ? 'is-sun' : '',
+      weekday === 6 ? 'is-sat' : '',
     ]
       .filter(Boolean)
       .join(' ');
@@ -49,20 +54,24 @@ function renderCells(cells, { selectedDateKey, todayKey, datesWithNotes, onSelec
       <button
         class="calendar__cell"
         key=${dateKey}
+        aria-label=${`${date.getMonth() + 1}月${date.getDate()}日${dots.length ? '（メモあり）' : ''}`}
+        aria-pressed=${isSelected}
         onClick=${() => onSelectDate(dateKey)}
       >
         <span class=${circleClass}>${date.getDate()}</span>
-        <span class=${`calendar__dot${hasNote ? ' is-visible' : ''}`}></span>
+        <span class="calendar__dots">
+          ${dots.map((c, j) => html`<span key=${j} class=${`calendar__dot${c ? ' is-tag' : ''}`} style=${c ? tagColorVars(c) : null}></span>`)}
+        </span>
       </button>
     `;
   });
 }
 
 // year/month: 表示中の月。selectedDateKey: 選択中の日。todayKey: 今日。
-// datesWithNotes: Set<dateKey>。expanded: falseなら選択中の週だけ表示。
+// dayDots: Map<dateKey, 色キー[]>(上の renderCells)。expanded: falseなら選択中の週だけ表示。
 // onSelectDate(dateKey). onChangeMonth(deltaMonths)は月表示のスワイプ用。
 // onShiftWeek(deltaWeeks)は週表示のスワイプ用。
-export function Calendar({ year, month, selectedDateKey, todayKey, datesWithNotes, expanded, onSelectDate, onChangeMonth, onShiftWeek }) {
+export function Calendar({ year, month, selectedDateKey, todayKey, dayDots, expanded, onSelectDate, onChangeMonth, onShiftWeek }) {
   const monthDragRef = useRef(null);
 
   const weekViewportRef = useRef(null);
@@ -144,12 +153,12 @@ export function Calendar({ year, month, selectedDateKey, todayKey, datesWithNote
 
   const weekdaysRow = html`
     <div class="calendar__weekdays">
-      ${WEEKDAYS.map((w) => html`<div class="calendar__weekday" key=${w}>${w}</div>`)}
+      ${WEEKDAYS.map((w, i) => html`<div class=${`calendar__weekday${i === 0 ? ' is-sun' : i === 6 ? ' is-sat' : ''}`} key=${w}>${w}</div>`)}
     </div>
   `;
 
   if (expanded === false) {
-    const cellCtx = { selectedDateKey, todayKey, datesWithNotes, onSelectDate };
+    const cellCtx = { selectedDateKey, todayKey, dayDots, onSelectDate };
     const pages = [-1, 0, 1].map((offset) => buildWeekGrid(selectedDateKey, offset));
     const trackStyle = {
       transform: `translateX(calc(-33.3333% + ${weekDragX}px))`,
@@ -193,7 +202,7 @@ export function Calendar({ year, month, selectedDateKey, todayKey, datesWithNote
     >
       ${weekdaysRow}
       <div class="calendar__grid">
-        ${renderCells(cells, { selectedDateKey, todayKey, datesWithNotes, onSelectDate })}
+        ${renderCells(cells, { selectedDateKey, todayKey, dayDots, onSelectDate })}
       </div>
     </div>
   `;

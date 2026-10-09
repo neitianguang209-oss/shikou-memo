@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as db from '../lib/db.js';
 import { formatDateHeadingWithYear, formatTime } from '../lib/format.js';
 import { tagColorVars } from '../lib/tagColors.js';
+import { SourceMark, isFromReading } from './NoteItem.js';
 
 const html = htm.bind(React.createElement);
 const SNIPPET_LEAD = 18;   // 一致した所がこれより後ろにあるときは、手前を「…」で省いて見せる
@@ -139,6 +140,7 @@ export function SearchView({ onJumpToHome, dataVersion }) {
             <button key=${n.id} class="search-result" onClick=${() => onJumpToHome(n.dateKey, n.id)}>
               <div class="search-result__meta">
                 <span>${formatDateHeadingWithYear(n.dateKey)} ${formatTime(n.createdAt)}</span>
+                ${isFromReading(n) && html`<${SourceMark} compact=${true} />`}
                 ${noteTags.map((t) => html`<span key=${t.id} class="tag-chip tag-chip--mini" style=${tagColorVars(t.colorKey)}>#${t.name}</span>`)}
               </div>
               <div class="search-result__body"><${Snippet} body=${n.body} query=${trimmed} /></div>

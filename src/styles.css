@@ -1,15 +1,24 @@
 :root {
   --bg-top: #FFFFFF;
-  --bg-notes: #EFEFEF;
+  /* メモの地はうすい杏色寄りの生成り(やわらかい地色) */
+  --bg-notes: #F6F1E9;
   --bubble: #FFFFFF;
   --text: #1C1C1E;
-  --text-sub: #8A8A8E;
+  --text-sub: #8C867E;
+  --text-faint: #CDC5B8;
   --accent: #F5D6A0;
   --accent-soft: #FBEBCF;
+  --accent-deep: #E2B260;
   --accent-strong: #5A4A2A;
-  --divider: #E5E5E5;
-  --text-faint: #C7C7CC;
-  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --divider: #ECE5DA;
+  --rail: #E4DACB;
+  --shadow-soft: 0 1px 3px rgba(90, 74, 42, 0.07);
+  /* 曜日(くすませた赤と青) */
+  --sun: #C0675B;
+  --sat: #4F7CAE;
+  /* 「読書メモから」の印(読書記録アプリの深緑に合わせる) */
+  --src-bg: #E2ECE7;
+  --src-fg: #2F5A4F;
 
   /* タグカラーパレット(15色、色相順)。既存8色(blue/green/lavender/apricot/pink/mint/sand/gray)は
      すでに使われているタグの色キーなので値を変更しない。新規7色を隙間の色相に追加。 */
@@ -302,26 +311,96 @@ input:focus-visible {
   box-sizing: border-box;
 }
 
+.calendar__day-circle.is-sun:not(.is-selected) { color: var(--sun); }
+.calendar__day-circle.is-sat:not(.is-selected) { color: var(--sat); }
+.calendar__weekday.is-sun { color: var(--sun); }
+.calendar__weekday.is-sat { color: var(--sat); }
+
+/* 今日は濃いめの杏色の輪、選んでいる日は杏色で塗る */
 .calendar__day-circle.is-today {
-  border: 1.5px solid var(--accent);
-  font-weight: 600;
+  border: 2px solid var(--accent-deep);
+  font-weight: 700;
 }
 
 .calendar__day-circle.is-selected {
   background: var(--accent);
   color: var(--accent-strong);
-  font-weight: 600;
+  font-weight: 700;
+}
+
+/* その日のメモのタグ色の点(最大3つ。タグなしは灰色) */
+.calendar__dots {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  height: 5px;
 }
 
 .calendar__dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: transparent;
+  background: var(--text-faint);
 }
 
-.calendar__dot.is-visible {
-  background: var(--text-sub);
+.calendar__dot.is-tag {
+  background: var(--tag-fg);
+}
+
+/* ---- 上に残る週の帯 ---- */
+.home__mini {
+  position: sticky;
+  top: 0;
+  height: 0;
+  z-index: 8;
+}
+
+.home__mini-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  background: var(--bg-top);
+  padding: 8px 20px 4px;
+  border-bottom: 1px solid var(--divider);
+  box-shadow: 0 4px 14px rgba(90, 74, 42, 0.08);
+  transform: translateY(-110%);
+  visibility: hidden;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.22s;
+}
+
+.home__mini-bar.is-visible {
+  transform: none;
+  visibility: visible;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.home__mini-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.home__mini-date {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.home__mini-row .home__calendar-toggle {
+  width: 32px;
+  height: 32px;
+}
+
+.home__mini-bar .calendar__cell {
+  max-height: 48px;
+}
+
+.home__mini-bar .calendar__day-circle {
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
 }
 
 .home__notes {
@@ -344,6 +423,90 @@ input:focus-visible {
   font-size: 13px;
 }
 
+/* ---- メモ1件(3つの見せ方で共通) ---- */
+.note-text {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.note-text.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 長押しはこのアプリのメニューにするので、iPhone の文字選択は出さない(コピーはメニューから) */
+.note-bubble,
+.tl-card,
+.diary-row {
+  cursor: pointer;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.note-row,
+.tl-row,
+.diary-row {
+  scroll-margin-top: 130px;
+}
+
+.note-more {
+  font-size: 13px;
+  color: var(--text-sub);
+  padding: 2px 0;
+}
+
+.note-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.note-tags .tag-chip {
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+/* 「読書メモから」の印 */
+.src-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px 1px 6px;
+  border-radius: 999px;
+  background: var(--src-bg);
+  color: var(--src-fg);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.src-mark svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.src-mark--compact {
+  padding: 0 7px 0 5px;
+  font-size: 10.5px;
+}
+
+.src-mark--compact svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* 吹き出し */
 .note-row {
   display: flex;
   align-items: flex-start;
@@ -377,48 +540,160 @@ input:focus-visible {
   background: var(--bubble);
   border-radius: 4px 14px 14px 14px;
   padding: 10px 14px;
-  font-size: 16px;
-  line-height: 1.65;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  text-align: left;
   box-shadow: var(--shadow-soft);
-  cursor: pointer;
-  /* 長押しはこのアプリのメニューにするので、iPhone の文字選択は出さない(コピーはメニューから) */
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
   transition: box-shadow 0.2s ease;
 }
 
-.note-bubble.is-clamped {
-  display: -webkit-box;
-  -webkit-line-clamp: 6;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+/* 先頭のタグの色を左端の細い線に */
+.note-bubble.has-tag {
+  border-left: 3px solid var(--tag-fg);
+  padding-left: 12px;
 }
 
-.note-more {
-  font-size: 13px;
+.note-bubble.is-highlighted,
+.tl-card.is-highlighted {
+  box-shadow: 0 0 0 2px var(--accent-deep), var(--shadow-soft);
+}
+
+/* タイムライン */
+.tl-list {
+  padding: 2px 0 4px;
+}
+
+.tl-row {
+  display: grid;
+  grid-template-columns: 42px 20px minmax(0, 1fr);
+  align-items: start;
+}
+
+.tl-time {
+  padding-top: 12px;
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   color: var(--text-sub);
-  padding: 0 4px;
 }
 
-.note-tags {
+.tl-rail {
+  position: relative;
+  align-self: stretch;
+}
+
+.tl-rail::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--rail);
+}
+
+.tl-row:first-child .tl-rail::before { top: 16px; }
+.tl-row:last-child .tl-rail::before { bottom: auto; height: 16px; }
+.tl-row:only-child .tl-rail::before { display: none; }
+
+.tl-dot {
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-notes);
+  border: 2px solid var(--text-faint);
+  box-sizing: border-box;
+}
+
+.tl-row.has-tag .tl-dot {
+  background: var(--tag-fg);
+  border-color: var(--tag-bg);
+  box-shadow: 0 0 0 2px var(--bg-notes);
+}
+
+.tl-main {
+  min-width: 0;
+  padding: 0 4px 14px 4px;
+}
+
+.tl-card {
+  background: var(--bubble);
+  border-radius: 14px;
+  padding: 11px 14px 12px;
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow 0.2s ease;
+}
+
+.tl-card .note-more {
+  display: block;
+}
+
+.tl-card .note-tags {
+  margin-top: 8px;
+}
+
+/* 日記帳 */
+.diary-paper {
+  background: var(--bubble);
+  border-radius: 16px;
+  padding: 2px 18px;
+  box-shadow: var(--shadow-soft);
+}
+
+.diary-row {
+  padding: 14px 0 15px;
+  border-bottom: 1px solid var(--divider);
+  transition: background-color 0.3s ease;
+}
+
+.diary-row:last-child {
+  border-bottom: none;
+}
+
+.diary-row.is-highlighted {
+  background: var(--accent-soft);
+  margin: 0 -18px;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.diary-meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
 }
 
-.note-tags .tag-chip {
-  padding: 1px 8px;
-  font-size: 11px;
+.diary-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex-shrink: 0;
 }
 
-.note-bubble.is-highlighted {
-  box-shadow: 0 0 0 2px var(--accent), var(--shadow-soft);
+.diary-dot.has-tag {
+  background: var(--tag-fg);
+}
+
+.diary-row .note-text {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif;
+  font-size: 16.5px;
+  line-height: 1.85;
+  letter-spacing: 0.02em;
+}
+
+.diary-row .note-more {
+  display: block;
+}
+
+.diary-row .note-tags {
+  margin-top: 8px;
 }
 
 .fab {
@@ -459,6 +734,8 @@ input:focus-visible {
   justify-content: center;
   z-index: 50;
   animation: fade-in 0.18s ease-out;
+  /* キーボードが出ている分だけ持ち上げる(viewport.js) */
+  padding-bottom: var(--kb, 0px);
 }
 
 @keyframes fade-in {
@@ -481,6 +758,10 @@ input:focus-visible {
   flex-direction: column;
   gap: 10px;
   animation: sheet-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  /* 見えている高さに収め、はみ出すときは中でスクロール(送るボタンは下に貼り付く) */
+  max-height: calc(var(--vvh, 100vh) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .input-sheet__handle {
@@ -540,7 +821,7 @@ input:focus-visible {
 .input-sheet__textarea {
   width: 100%;
   min-height: 96px;
-  max-height: 45vh;
+  max-height: min(45vh, calc(var(--vvh, 100vh) * 0.4));
   border: none;
   outline: none;
   resize: none;
@@ -596,21 +877,46 @@ input:focus-visible {
   align-items: center;
   justify-content: space-between;
   min-height: 44px;
+  gap: 8px;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 0 -20px;
+  padding: 4px 20px 0;
+  background: var(--bubble);
 }
 
 .input-sheet__datetime {
   font-size: 13px;
   color: var(--text-sub);
   font-variant-numeric: tabular-nums;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .input-sheet__discard {
-  margin-left: 6px;
-  margin-right: auto;
-  padding: 8px 10px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 999px;
   font-size: 13px;
   color: var(--text-sub);
+  white-space: nowrap;
   font-family: inherit;
+}
+
+.input-sheet__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.input-sheet__top .input-sheet__source {
+  min-width: 0;
 }
 
 .input-sheet__actions {
@@ -1378,4 +1684,87 @@ input:focus-visible {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---- 読書メモから届いた文章: 文字つきの「日記に入れる」ボタン ---- */
+.input-sheet__send--label {
+  width: auto;
+  height: 44px;
+  gap: 6px;
+  padding: 0 16px 0 18px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(90, 74, 42, 0.15);
+}
+
+.input-sheet__send--label svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* キーボードが出ているときは下の余白(ホームバーぶん)は要らない */
+.kb-open .input-sheet {
+  padding-bottom: 10px;
+}
+
+/* ---- 設定: メモの見せ方 ---- */
+.settings-card {
+  background: var(--bubble);
+  border-radius: 12px;
+  padding: 14px 14px 14px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-soft);
+}
+
+.settings-card__title {
+  font-size: 16px;
+  color: var(--text);
+  margin: 0 2px 10px;
+}
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--bg-notes);
+}
+
+.segmented__item {
+  flex: 1;
+  min-height: 34px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-sub);
+}
+
+.segmented__item.is-active {
+  background: var(--bubble);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(90, 74, 42, 0.12);
+}
+
+.style-preview {
+  margin-top: 12px;
+  padding: 14px 10px 0;
+  border-radius: 12px;
+  background: var(--bg-notes);
+  pointer-events: none;
+}
+
+.style-preview .diary-paper {
+  margin-bottom: 14px;
+}
+
+/* ---- タグ別一覧: 本文の下に「読書メモから」 ---- */
+.tag-detail__note-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }

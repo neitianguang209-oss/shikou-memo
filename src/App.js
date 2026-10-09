@@ -7,6 +7,7 @@ import { SearchView } from './components/SearchView.js';
 import { SettingsView } from './components/SettingsView.js';
 import { getSyncState, onRemoteData, onSyncState } from './lib/sync.js';
 import { takeLinkedDraft } from './lib/inbox.js';
+import { readNoteStyle, writeNoteStyle } from './lib/prefs.js';
 
 const html = htm.bind(React.createElement);
 
@@ -20,6 +21,8 @@ export function App() {
   const [dataVersion, setDataVersion] = useState(0);
   const [sync, setSync] = useState(getSyncState());
   const [toast, setToast] = useState('');
+  // メモの見せ方(吹き出し/タイムライン/日記帳)。この端末だけの好み
+  const [noteStyle, setNoteStyle] = useState(readNoteStyle);
   // 読書記録の「日記へ」からリンクで届いた文章(ホームで今日の入力画面として開く)
   const [incomingDraft, setIncomingDraft] = useState(null);
 
@@ -79,10 +82,17 @@ export function App() {
           onToast=${setToast}
           dataVersion=${dataVersion}
           sync=${sync}
+          noteStyle=${noteStyle}
         />`}
         ${view === 'tags' && html`<${TagsView} onJumpToHome=${jumpToHome} startEditToken=${tagsOpenToken} onStartEditConsumed=${() => setTagsOpenToken(null)} dataVersion=${dataVersion} />`}
         ${view === 'search' && html`<${SearchView} onJumpToHome=${jumpToHome} dataVersion=${dataVersion} />`}
-        ${view === 'settings' && html`<${SettingsView} onManageTags=${manageTags} dataVersion=${dataVersion} sync=${sync} />`}
+        ${view === 'settings' && html`<${SettingsView}
+          onManageTags=${manageTags}
+          dataVersion=${dataVersion}
+          sync=${sync}
+          noteStyle=${noteStyle}
+          onChangeNoteStyle=${(s) => { setNoteStyle(s); writeNoteStyle(s); }}
+        />`}
       </div>
       <${BottomNav} active=${view} onChange=${setView} />
       ${toast && html`<div class="toast" role="status" onClick=${() => setToast('')}>${toast}</div>`}
