@@ -4,6 +4,7 @@ import * as db from '../lib/db.js';
 import { formatDateHeadingWithYear, formatTime } from '../lib/format.js';
 import { tagColorVars } from '../lib/tagColors.js';
 import { SourceMark, isFromReading } from './NoteItem.js';
+import { LinkedText, NoteLink, findUrls, pressable } from './LinkedText.js';
 
 const html = htm.bind(React.createElement);
 const SNIPPET_LEAD = 18;   // 一致した所がこれより後ろにあるときは、手前を「…」で省いて見せる
@@ -47,17 +48,44 @@ function findRanges(index, normQuery) {
 function Snippet({ body, query }) {
   const index = indexBody(body);
   const ranges = findRanges(index, normalize(query));
-  if (ranges.length === 0) return html`${body}`;
+  if (ranges.length === 0) return html`<${LinkedText} text=${body} />`;
   const cut = ranges[0][0] > SNIPPET_LEAD + 6 ? ranges[0][0] - SNIPPET_LEAD : 0;
-  const parts = [];
-  let pos = cut;
-  ranges.forEach(([s, e], i) => {
-    if (s < pos) return;
-    if (s > pos) parts.push(index.chars.slice(pos, s).join(''));
-    parts.push(html`<mark key=${i} class="search-highlight">${index.chars.slice(s, e).join('')}</mark>`);
-    pos = e;
+
+  // 1文字ごとに「どのURLの中か」「色を付けるか」を決め、同じもの同士をまとめて出す
+  const n = index.chars.length;
+  const urlOf = new Array(n).fill(-1);
+  const urls = findUrls(body);
+  if (urls.length > 0) {
+    let off = 0;
+    index.chars.forEach((ch, i) => {
+      const u = urls.findIndex((x) => off >= x.start && off < x.end);
+      urlOf[i] = u;
+      off += ch.length;
+    });
+  }
+  const marked = new Array(n).fill(false);
+  let last = 0;
+  ranges.forEach(([s, e]) => {
+    if (s < last) return;
+    for (let i = s; i < e; i++) marked[i] = true;
+    last = e;
   });
-  parts.push(index.chars.slice(pos).join(''));
+
+  const parts = [];
+  let i = cut;
+  while (i < n) {
+    const u = urlOf[i];
+    const pieces = [];
+    while (i < n && urlOf[i] === u) {
+      const m = marked[i];
+      let j = i;
+      while (j < n && urlOf[j] === u && marked[j] === m) j++;
+      const text = index.chars.slice(i, j).join('');
+      pieces.push(m ? html`<mark key=${i} class="search-highlight">${text}</mark>` : text);
+      i = j;
+    }
+    parts.push(u >= 0 ? html`<${NoteLink} key=${`u${i}`} href=${urls[u].url}>${pieces}<//>` : pieces);
+  }
   return html`${cut > 0 ? '…' : ''}${parts}`;
 }
 
@@ -137,14 +165,14 @@ export function SearchView({ onJumpToHome, dataVersion }) {
         ${results.map((n) => {
           const noteTags = (n.tagIds || []).map((id) => tags.find((t) => t.id === id)).filter(Boolean);
           return html`
-            <button key=${n.id} class="search-result" onClick=${() => onJumpToHome(n.dateKey, n.id)}>
+            <div key=${n.id} class="search-result" ...${pressable(() => onJumpToHome(n.dateKey, n.id))}>
               <div class="search-result__meta">
                 <span>${formatDateHeadingWithYear(n.dateKey)} ${formatTime(n.createdAt)}</span>
                 ${isFromReading(n) && html`<${SourceMark} compact=${true} />`}
                 ${noteTags.map((t) => html`<span key=${t.id} class="tag-chip tag-chip--mini" style=${tagColorVars(t.colorKey)}>#${t.name}</span>`)}
               </div>
               <div class="search-result__body"><${Snippet} body=${n.body} query=${trimmed} /></div>
-            </button>
+            </div>
           `;
         })}
       </div>

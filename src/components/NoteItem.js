@@ -2,6 +2,7 @@ import htm from 'htm';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { formatTime } from '../lib/format.js';
 import { tagColorVars } from '../lib/tagColors.js';
+import { LinkedText } from './LinkedText.js';
 
 const html = htm.bind(React.createElement);
 const LONG_PRESS_MS = 500;
@@ -115,7 +116,7 @@ export function NoteItem({ note, tags, variant, highlighted, onTap, onLongPress 
     <div
       ref=${bodyRef}
       class=${`note-text${isExpanded ? '' : ' is-clamped'}`}
-    >${note.body}</div>
+    ><${LinkedText} text=${note.body} /></div>
   `;
   const more = clamped && html`<button class="note-more" onClick=${() => setIsExpanded(true)}>続きを読む</button>`;
   const meta = (fromReading || noteTags.length > 0) && html`

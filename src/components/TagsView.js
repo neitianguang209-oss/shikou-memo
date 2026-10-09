@@ -6,6 +6,7 @@ import { tagColorVars } from '../lib/tagColors.js';
 import { TagEditorModal } from './TagEditorModal.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import { SourceMark, isFromReading } from './NoteItem.js';
+import { LinkedText, pressable } from './LinkedText.js';
 
 const html = htm.bind(React.createElement);
 const UNCLASSIFIED_ID = '__unclassified__';
@@ -123,17 +124,17 @@ export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed, da
                 <div class="tag-detail__date">${formatDateHeadingWithYear(g.dateKey)}</div>
                 ${g.notes.map(
                   (n) => html`
-                    <button
+                    <div
                       key=${n.id}
                       class="tag-detail__note"
-                      onClick=${() => onJumpToHome(n.dateKey, n.id)}
+                      ...${pressable(() => onJumpToHome(n.dateKey, n.id))}
                     >
                       <span class="note-time">${formatTime(n.createdAt)}</span>
                       <span class="tag-detail__note-main">
-                        <span class="tag-detail__note-body">${n.body}</span>
+                        <span class="tag-detail__note-body"><${LinkedText} text=${n.body} /></span>
                         ${isFromReading(n) && html`<${SourceMark} compact=${true} />`}
                       </span>
-                    </button>
+                    </div>
                   `
                 )}
               </div>

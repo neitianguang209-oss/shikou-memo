@@ -1768,3 +1768,21 @@ input:focus-visible {
   align-items: flex-start;
   gap: 6px;
 }
+
+/* ---- 本文の中のURL ---- */
+.note-link {
+  color: var(--sat);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+  /* 行間のすき間を押してもリンクになるよう、押せる範囲だけ上下に広げる(行の高さは変わらない) */
+  padding: 0.3em 0;
+  -webkit-touch-callout: default;
+}
+
+/* もとは <button> だった一覧の行(中にリンクを入れるため div にした) */
+.tag-detail__note,
+.search-result {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
