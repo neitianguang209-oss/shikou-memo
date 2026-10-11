@@ -748,37 +748,134 @@ input:focus-visible {
   to { transform: translateY(0); opacity: 1; }
 }
 
+/* ---- 上から出るカード(メモの入力・タグ名の入力) ----
+   キーボードは下から出てくる。文字を打つものを画面の上側に置いておけば、
+   キーボードの高さを正しく測れない端末でも、送るボタンが裏に隠れることがない */
+.overlay--top {
+  align-items: flex-start;
+  padding: calc(8px + env(safe-area-inset-top)) 8px 0;
+}
+
+@keyframes sheet-down {
+  from { transform: translateY(-16px); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 .input-sheet {
   width: 100%;
-  max-width: 480px;
+  max-width: 464px;
   background: var(--bubble);
-  border-radius: 20px 20px 0 0;
-  padding: 6px 20px calc(14px + env(safe-area-inset-bottom));
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+  animation: sheet-down 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  /* 見えている高さに収める。はみ出すときは下の部分だけが中でスクロールし、
+     いちばん上の「送信」は動かない */
+  max-height: calc(var(--vvh, 100vh) - 16px - env(safe-area-inset-top));
+  overflow: hidden;
+}
+
+.input-sheet__header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 8px 12px 4px 8px;
+}
+
+.input-sheet__close {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-sub);
+}
+
+.input-sheet__close:active {
+  background: var(--bg-notes);
+}
+
+.input-sheet__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.input-sheet__datetime {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.input-sheet__send {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 78px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-strong);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(90, 74, 42, 0.15);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.input-sheet__send:active {
+  transform: scale(0.95);
+}
+
+/* まだ何も書いていないとき(押せば入力欄に戻るだけ) */
+.input-sheet__send.is-empty {
+  background: var(--divider);
+  color: var(--text-sub);
+  box-shadow: none;
+}
+
+.input-sheet__send svg {
+  width: 18px;
+  height: 18px;
+}
+
+.input-sheet__body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  animation: sheet-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  /* 見えている高さに収め、はみ出すときは中でスクロール(送るボタンは下に貼り付く) */
-  max-height: calc(var(--vvh, 100vh) - 24px);
+  min-height: 0;
+  padding: 4px 16px 14px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-.input-sheet__handle {
-  width: 40px;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--divider);
-  align-self: center;
-  margin: 4px 0 4px;
-  touch-action: none;
+.input-sheet__body > * {
+  flex-shrink: 0;
+}
+
+.input-sheet__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .input-sheet__source {
   display: flex;
   align-items: center;
   gap: 6px;
-  align-self: flex-start;
+  min-width: 0;
   max-width: 100%;
   padding: 4px 10px;
   border-radius: 999px;
@@ -797,6 +894,16 @@ input:focus-visible {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
+}
+
+.input-sheet__discard {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-sub);
+  white-space: nowrap;
 }
 
 .input-sheet__notice {
@@ -821,7 +928,9 @@ input:focus-visible {
 .input-sheet__textarea {
   width: 100%;
   min-height: 96px;
-  max-height: min(45vh, calc(var(--vvh, 100vh) * 0.4));
+  /* 見えている高さから、上の段とタグ3行ぶんを引いた残り。キーボードの高さを測れない端末でも
+     入力欄の下の端がキーボードに入らないよう、上限は控えめにしておく */
+  max-height: min(calc(var(--vvh, 100vh) - 215px), 240px);
   border: none;
   outline: none;
   resize: none;
@@ -838,18 +947,39 @@ input:focus-visible {
   opacity: 0.7;
 }
 
-.input-sheet__tagrow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  max-height: 30vh;
-  overflow-y: auto;
-  padding: 2px 0 4px;
+.input-sheet__error {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-sub);
 }
 
-.input-sheet__tagrow .tag-chip {
+/* タグ: 先頭の # で開け閉め。閉じているときは選んだタグだけが並ぶ */
+.input-sheet__tagbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-sheet__tagbar .tag-chip {
   padding: 6px 13px;
   font-size: 14px;
+}
+
+.input-sheet__hash {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-sub);
+  background: var(--bg-notes);
+}
+
+.input-sheet__hash.is-open {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 .tag-chip--new {
@@ -861,9 +991,17 @@ input:focus-visible {
 .input-sheet__selected {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  align-self: flex-start;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
   text-align: left;
+}
+
+.input-sheet__tags-hint {
+  min-height: 36px;
+  padding: 0 6px;
+  font-size: 14px;
+  color: var(--text-sub);
 }
 
 .input-sheet__tags-loading {
@@ -872,98 +1010,10 @@ input:focus-visible {
   padding: 6px 0;
 }
 
-.input-sheet__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 44px;
-  gap: 8px;
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  margin: 0 -20px;
-  padding: 4px 20px 0;
-  background: var(--bubble);
-}
-
-.input-sheet__datetime {
-  font-size: 13px;
-  color: var(--text-sub);
-  font-variant-numeric: tabular-nums;
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.input-sheet__discard {
-  flex-shrink: 0;
-  margin-left: auto;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  color: var(--text-sub);
-  white-space: nowrap;
-  font-family: inherit;
-}
-
-.input-sheet__top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.input-sheet__top .input-sheet__source {
-  min-width: 0;
-}
-
-.input-sheet__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: auto;
-}
-
-.input-sheet__hash {
-  font-size: 19px;
-  font-weight: 500;
-  color: var(--text-sub);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-}
-
-.input-sheet__hash.is-open {
-  background: var(--bg-notes);
-  color: var(--text);
-}
-
-.input-sheet__send {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-strong);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.15s ease;
-}
-
-.input-sheet__send:active:not(:disabled) {
-  transform: scale(0.92);
-}
-
-.input-sheet__send:disabled {
-  background: var(--divider);
-  color: var(--text-sub);
-}
-
-.input-sheet__send svg {
-  width: 20px;
-  height: 20px;
+/* 上にカードが出ているあいだは、お知らせをカードに重ねない */
+body:has(.overlay--top) .toast {
+  top: auto;
+  bottom: calc(var(--kb, 0px) + 20px + env(safe-area-inset-bottom));
 }
 
 .modal-card {
@@ -977,6 +1027,14 @@ input:focus-visible {
   flex-direction: column;
   gap: 14px;
   animation: sheet-up 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 名前を打つカード(タグ名)は上に出す */
+.overlay--top > .modal-card {
+  margin: 4px 0 0;
+  max-height: calc(var(--vvh, 100vh) - 20px - env(safe-area-inset-top));
+  overflow-y: auto;
+  animation-name: sheet-down;
 }
 
 .modal-card__title {
@@ -1684,29 +1742,6 @@ input:focus-visible {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
-}
-
-/* ---- 読書メモから届いた文章: 文字つきの「日記に入れる」ボタン ---- */
-.input-sheet__send--label {
-  width: auto;
-  height: 44px;
-  gap: 6px;
-  padding: 0 16px 0 18px;
-  border-radius: 999px;
-  font-size: 15px;
-  font-weight: 700;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(90, 74, 42, 0.15);
-}
-
-.input-sheet__send--label svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* キーボードが出ているときは下の余白(ホームバーぶん)は要らない */
-.kb-open .input-sheet {
-  padding-bottom: 10px;
 }
 
 /* ---- 設定: メモの見せ方 ---- */

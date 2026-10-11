@@ -282,6 +282,11 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
   function openDraft(draft, via) {
     const todayKey = todayDateKey();
     const s = draft.source || {};
+    // リンクで届いた文章は、入れる前にアプリが閉じても残るよう、先に受け取り箱へ置く
+    if (via === 'link') {
+      addToInbox(draft);
+      setDrafts(readInbox());
+    }
     setSelectedDateKey(todayKey);
     setComposer({
       mode: 'create',
@@ -308,16 +313,15 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     });
   }
 
-  // 送らずに閉じたとき。ふつうの新規メモは「書きかけ」として覚え、次に＋で戻す。
+  // 書いている途中と、送らずに閉じたとき。ふつうの新規メモは「書きかけ」として覚え、次に＋で戻す。
   // 読書メモから届いた文章は、直した中身ごと上のお知らせに置いておく(書きかけとは混ぜない)
   function handleUnsent(body, tagIds) {
     const c = composerRef.current;
     if (!c || c.mode !== 'create') return;
     if (c.draft) {
-      if (body.trim()) {
-        addToInbox({ ...c.draft, editedBody: body });
-        setDrafts(readInbox());
-      }
+      // 空にして閉じたときは、届いたままの文章に戻して置いておく
+      addToInbox({ ...c.draft, editedBody: body.trim() ? body : undefined });
+      setDrafts(readInbox());
       return;
     }
     writeUnsent(body, tagIds);
@@ -354,17 +358,19 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
 
   async function handleSaved(savedNote) {
     const c = composerRef.current;
-    // 下書きから作ったメモなら、受け取り箱から消して、その日付へ移動して見せる
+    const created = !!(c && c.mode === 'create' && savedNote);
+    // 下書きから作ったメモなら、受け取り箱から消して、すぐクラウドへ送る
     if (c && c.draftId) {
       removeFromInbox(c.draftId);
       setDrafts(readInbox());
-      if (savedNote) {
-        setSelectedDateKey(savedNote.dateKey);
-        setHighlightedId(savedNote.id);
-        sendDraftNow(savedNote.id);
-      }
+      if (savedNote) sendDraftNow(savedNote.id);
     } else if (c && c.mode === 'create') {
       clearUnsent();
+    }
+    // 送ったら入力画面は閉じる。その日の一覧に戻って、いま書いたメモを見せる
+    if (created) {
+      setSelectedDateKey(savedNote.dateKey);
+      setHighlightedId(savedNote.id);
     }
     await reloadNotes();
     await reloadDots();
@@ -513,7 +519,6 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
           notice=${composer.notice}
           submitLabel=${composer.submitLabel}
           noteExtra=${composer.noteExtra}
-          closeAfterSend=${!!composer.draftId}
           onDiscard=${composer.draftId ? () => discardDraft(composer.draftId) : null}
           onUnsent=${handleUnsent}
           allTags=${tags}

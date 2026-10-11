@@ -68,7 +68,7 @@ export function TagEditorModal({ mode, tag, existingTags, onClose, onSaved }) {
   }
 
   return html`
-    <div class="overlay" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div class="overlay overlay--top" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div class="modal-card" role="dialog" aria-label=${mode === 'create' ? '新しいタグ' : 'タグを編集'}>
         <div class="modal-card__title">${mode === 'create' ? '新しいタグ' : 'タグを編集'}</div>
         <input

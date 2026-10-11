@@ -7,7 +7,7 @@ import { NoteItem, NOTE_STYLES } from './NoteItem.js';
 import { syncNow } from '../lib/sync.js';
 
 const html = htm.bind(React.createElement);
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.5.0';
 const LAST_EXPORT_KEY = 'shikou-memo:lastExportAt';
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
