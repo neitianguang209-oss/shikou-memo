@@ -50,3 +50,12 @@ PWA は HTTPS 配信が必須のため、iPhone実機で使うには公開が必
 - 毎週の自動バックアップ(`~/.claude/backup-supabase.ps1`)が、記録と履歴を OneDrive に保存します（`shikou_memo_dump.json`。今の中身だけなら `app_backups.json` にも入っています）。
 - 設定画面の「データを書き出す」で手元に JSON の控えも作れます。「データを読み込む」は今のメモに**足す**だけで、今のメモは消しません。
 - IndexedDB が開けない端末では、メモリ上で動かしつつクラウドへの保存は続けます。
+
+## じぶん(旧じぶんノート、v1.6.0〜)
+
+2026-11-02 にじぶんノートをこのアプリの「じぶん」タブにまとめた。問いを選んで Claude と話し、気づきとその変化を振り返る。
+
+- 画面は `src/components/JibunView.js`、データの出入りは `src/lib/jibun.js`(Supabase の関数 `jibun_api` だけを通す。表は anon から閉じている)
+- 合言葉は端末の localStorage `jibun-note:key`(就活アプリと共通)。`#jibun&k=合言葉` 付きのリンクで開くと保存されて「じぶん」が開く
+- ホームのメモを長押し →「問いにする」で、メモの文を問いの下書きにできる
+- 旧 `jibun-note` の公開ページは `../shikou-memo/#jibun` へ飛ばすだけ

@@ -5,8 +5,10 @@ import { HomeView } from './components/HomeView.js';
 import { TagsView } from './components/TagsView.js';
 import { SearchView } from './components/SearchView.js';
 import { SettingsView } from './components/SettingsView.js';
+import { JibunView } from './components/JibunView.js';
 import { getSyncState, onRemoteData, onSyncState } from './lib/sync.js';
 import { takeLinkedDraft } from './lib/inbox.js';
+import { takeKeyFromHash } from './lib/jibun.js';
 import { readNoteStyle, writeNoteStyle } from './lib/prefs.js';
 
 const html = htm.bind(React.createElement);
@@ -25,6 +27,10 @@ export function App() {
   const [noteStyle, setNoteStyle] = useState(readNoteStyle);
   // 読書記録の「日記へ」からリンクで届いた文章(ホームで今日の入力画面として開く)
   const [incomingDraft, setIncomingDraft] = useState(null);
+  // 合言葉入りのリンクで開かれるたびに増える(「じぶん」が読み直す)
+  const [jibunKeyVersion, setJibunKeyVersion] = useState(0);
+  // ホームのメモから「問いにする」で渡す文章
+  const [questionDraft, setQuestionDraft] = useState(null);
 
   const bodyRef = useRef(null);
 
@@ -38,6 +44,18 @@ export function App() {
   // 開いたときと、すでに開いているタブへもう一度送られてきたとき
   useEffect(() => {
     function receive() {
+      // 旧じぶんノートのリンク(#jibun、合言葉つきなら #jibun&k=...)は「じぶん」を開く
+      const hash = window.location.hash || '';
+      if (/^#(jibun|k=)/.test(hash)) {
+        if (takeKeyFromHash()) setJibunKeyVersion((v) => v + 1);
+        try {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+        } catch (e) {
+          window.location.hash = '';
+        }
+        setView('jibun');
+        return;
+      }
       const draft = takeLinkedDraft();
       if (!draft) return;
       setIncomingDraft(draft);
@@ -83,6 +101,13 @@ export function App() {
           dataVersion=${dataVersion}
           sync=${sync}
           noteStyle=${noteStyle}
+          onMakeQuestion=${(text) => { setQuestionDraft({ text, token: Date.now() }); setView('jibun'); }}
+        />`}
+        ${view === 'jibun' && html`<${JibunView}
+          onToast=${setToast}
+          keyVersion=${jibunKeyVersion}
+          questionDraft=${questionDraft}
+          onQuestionDraftConsumed=${() => setQuestionDraft(null)}
         />`}
         ${view === 'tags' && html`<${TagsView} onJumpToHome=${jumpToHome} startEditToken=${tagsOpenToken} onStartEditConsumed=${() => setTagsOpenToken(null)} dataVersion=${dataVersion} />`}
         ${view === 'search' && html`<${SearchView} onJumpToHome=${jumpToHome} dataVersion=${dataVersion} />`}

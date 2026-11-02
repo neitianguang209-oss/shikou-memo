@@ -8,6 +8,11 @@ const ICONS = {
     <path d="M4 11.5 12 4l8 7.5" />
     <path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9" />
   </svg>`,
+  jibun: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-7l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" />
+    <path d="M10.2 8.8a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3" />
+    <line x1="12" y1="13.6" x2="12" y2="13.7" />
+  </svg>`,
   tag: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
     <line x1="4" y1="9" x2="20" y2="9" />
     <line x1="4" y1="15" x2="20" y2="15" />
@@ -26,6 +31,7 @@ const ICONS = {
 
 const TABS = [
   { key: 'home', icon: 'home', label: 'ホーム' },
+  { key: 'jibun', icon: 'jibun', label: 'じぶん' },
   { key: 'tags', icon: 'tag', label: 'タグ' },
   { key: 'search', icon: 'search', label: '検索' },
   { key: 'settings', icon: 'settings', label: '設定' },

@@ -1821,3 +1821,300 @@ body:has(.overlay--top) .toast {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ---- じぶん(旧じぶんノート): 問い・気づき・記録 ---- */
+.jibun-view {
+  min-height: 100%;
+  background: var(--bg-notes);
+}
+
+.jibun-body {
+  padding: 12px 16px 104px;
+}
+
+.jibun-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 10px 0 4px;
+  scrollbar-width: none;
+}
+
+.jibun-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.jibun-chips--wrap {
+  flex-wrap: wrap;
+  overflow: visible;
+  padding: 0;
+}
+
+.jibun-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--divider);
+  background: var(--bubble);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.jibun-chip.is-active {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bubble);
+}
+
+.jibun-dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--tag-fg);
+  vertical-align: 1px;
+}
+
+.jibun-card {
+  background: var(--bubble);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 10px 0;
+  box-shadow: var(--shadow-soft);
+}
+
+.jibun-card--list {
+  padding: 2px 12px;
+}
+
+.jibun-today {
+  background: var(--accent-soft);
+  border: 1.5px solid var(--accent-deep);
+}
+
+.jibun-today__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+.jibun-today__q {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 19px;
+  line-height: 1.6;
+  margin: 6px 0 12px;
+}
+
+.jibun-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.jibun-row--end {
+  justify-content: flex-end;
+}
+
+.jibun-row--between {
+  justify-content: space-between;
+}
+
+.jibun-btn {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.jibun-btn:disabled {
+  opacity: 0.45;
+}
+
+.jibun-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--accent-deep);
+  font-weight: 500;
+}
+
+.jibun-btn--plain {
+  background: transparent;
+  color: var(--text-sub);
+  font-weight: 400;
+  padding: 8px;
+}
+
+.jibun-q {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 2px;
+  text-align: left;
+  border-bottom: 1px solid var(--divider);
+}
+
+.jibun-q:last-child {
+  border-bottom: none;
+}
+
+.jibun-q__bar {
+  width: 4px;
+  flex: none;
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--tag-fg);
+}
+
+.jibun-q__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.jibun-q__text {
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.jibun-q__pin {
+  color: var(--accent-deep);
+}
+
+.jibun-meta {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+.jibun-section {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+  margin: 18px 2px 4px;
+}
+
+.jibun-ins {
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.jibun-ins:first-child {
+  padding-top: 0;
+}
+
+.jibun-ins:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.jibun-ins__s {
+  line-height: 1.6;
+}
+
+.jibun-ins--change {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.jibun-ins__old {
+  color: var(--text-sub);
+  text-decoration: line-through;
+}
+
+.jibun-ins__arrow {
+  color: var(--accent-deep);
+  margin: 0 4px;
+}
+
+.jibun-conf {
+  letter-spacing: 1px;
+  color: var(--accent-deep);
+}
+
+.jibun-report {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.jibun-talk__title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 4px 0 6px;
+}
+
+.jibun-talk__summary {
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.jibun-talk__quote {
+  margin: 8px 0 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--divider);
+  color: var(--text-sub);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.jibun-empty {
+  padding: 24px 8px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-sub);
+}
+
+.jibun-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-sub);
+}
+
+.jibun-hint--lead {
+  margin: 10px 2px 0;
+}
+
+.jibun-key__msg {
+  margin: 0 0 10px;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.jibun-key__input {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.jibun-key__input:focus {
+  text-align: left;
+}
+
+.jibun-sheet {
+  gap: 12px;
+}
+
+.jibun-sheet__text {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 16px;
+  line-height: 1.6;
+  background: var(--bubble);
+  outline: none;
+}

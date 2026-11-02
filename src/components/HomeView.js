@@ -25,7 +25,7 @@ function syncWaitingText(sync) {
   return '';
 }
 
-export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsumed, onToast, dataVersion, sync, noteStyle }) {
+export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsumed, onToast, dataVersion, sync, noteStyle, onMakeQuestion }) {
   const [selectedDateKey, setSelectedDateKey] = useState(todayDateKey());
   const [today, setToday] = useState(todayDateKey());
   const initialDate = new Date();
@@ -535,6 +535,8 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
             { label: 'タグを編集', onSelect: () => openEdit(actionSheetNote, true) },
             { label: 'メモを編集', onSelect: () => openEdit(actionSheetNote, false) },
             { label: 'コピー', onSelect: () => copyNote(actionSheetNote) },
+            // 「じぶん」の問いストックへ。メモの文をそのまま問いの下書きにする
+            ...(onMakeQuestion ? [{ label: '問いにする', onSelect: () => onMakeQuestion(actionSheetNote.body) }] : []),
             { label: '削除', danger: true, onSelect: () => setDeleteTarget(actionSheetNote) },
           ]}
         />
