@@ -2166,3 +2166,25 @@ body:has(.overlay--top) .toast {
   background: var(--bubble);
   outline: none;
 }
+
+/* 途中で切り上げた問い */
+.jibun-paused {
+  border: 1.5px dashed var(--accent-deep);
+}
+
+.jibun-paused__q {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 4px 0 4px;
+}
+
+.jibun-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-strong);
+  font-weight: 600;
+}

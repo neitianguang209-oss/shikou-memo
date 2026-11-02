@@ -2,7 +2,7 @@ import htm from 'htm';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   THEMES, themeColorKey, readKey, writeKey, readCache, writeCache,
-  loadAll, addQuestion, updateQuestion, claudePrompt, shortDate,
+  loadAll, addQuestion, updateQuestion, claudePrompt, claudeResumePrompt, chatgptPrompt, shortDate,
 } from '../lib/jibun.js';
 import { tagColorVars } from '../lib/tagColors.js';
 
@@ -78,9 +78,15 @@ function QuestionItem({ q, onOpen }) {
   `;
 }
 
-function Questions({ data, inFilter, onOpen, onTalk, onCopy, onUnpick }) {
+function Questions({ data, inFilter, onOpen, onTalk, onChatgpt, onCopy, onUnpick, onResume, onResumeChatgpt }) {
   const today = data.questions.find((q) => q.status === '今日');
-  const open = data.questions.filter((q) => q.status !== '今日' && q.status !== '決着' && inFilter(q.theme));
+  // 途中で切り上げた話(新しい順)。その問いは下の一覧には出さない
+  const qById = Object.fromEntries(data.questions.map((q) => [q.id, q]));
+  const paused = data.talks
+    .filter((t) => t.status === '途中' && inFilter(t.theme))
+    .map((t) => ({ ...t, question: qById[t.question_id]?.question || '' }));
+  const pausedIds = new Set(paused.map((t) => t.question_id).filter(Boolean));
+  const open = data.questions.filter((q) => q.status !== '今日' && q.status !== '決着' && !pausedIds.has(q.id) && inFilter(q.theme));
   // まだ話していない問いが上(★→新しい順)。話した問いは下に沈め、最近話したものほど下へ
   const fresh = open.filter((q) => !q.times_talked);
   const talked = open.filter((q) => q.times_talked)
@@ -93,12 +99,27 @@ function Questions({ data, inFilter, onOpen, onTalk, onCopy, onUnpick }) {
         <div class="jibun-today__q">${today.question}</div>
         <div class="jibun-row">
           <button class="jibun-btn" onClick=${() => onTalk(today)}>Claudeと話す</button>
-          <button class="jibun-btn jibun-btn--ghost" onClick=${() => onCopy(today)}>文をコピー</button>
+          <button class="jibun-btn jibun-btn--ghost" onClick=${() => onChatgpt({ q: today })}>ChatGPTで話す</button>
+          <button class="jibun-btn jibun-btn--plain" onClick=${() => onCopy(today)}>文をコピー</button>
           <button class="jibun-btn jibun-btn--plain" onClick=${() => onUnpick(today)}>やめる</button>
         </div>
         <p class="jibun-hint">Claudeのアプリで「今日の問いで話そう」と言うだけでも、この問いから始まります。</p>
       </div>
     ` : html`<p class="jibun-hint jibun-hint--lead">話したい問いをタップして「今日はこれ」にすると、Claudeがその問いから始めます。</p>`}
+    ${paused.length > 0 && html`
+      <div class="jibun-section">途中の問い</div>
+      ${paused.map((t) => html`
+        <div key=${t.id} class="jibun-card jibun-paused">
+          <div class="jibun-meta"><${ThemeDot} theme=${t.theme} />${shortDate(t.talked_on)} に途中まで ・ ${t.theme}</div>
+          <div class="jibun-paused__q">${t.question || t.title}</div>
+          ${t.resume_note && html`<p class="jibun-hint">続きは: ${t.resume_note}</p>`}
+          <div class="jibun-row">
+            <button class="jibun-btn" onClick=${() => onResume(t)}>Claudeで続きを話す</button>
+            <button class="jibun-btn jibun-btn--ghost" onClick=${() => onResumeChatgpt(t)}>ChatGPTで続き</button>
+          </div>
+        </div>
+      `)}
+    `}
     <div class="jibun-card jibun-card--list">
       ${fresh.length
         ? fresh.map((q) => html`<${QuestionItem} key=${q.id} q=${q} onOpen=${onOpen} />`)
@@ -181,7 +202,11 @@ function Talks({ data, inFilter, filter }) {
       ? html`<div class="jibun-empty">まだ記録がありません。</div>`
       : talks.map((t) => html`
         <div key=${t.id} class="jibun-card jibun-talk">
-          <div class="jibun-meta"><${ThemeDot} theme=${t.theme} />${shortDate(t.talked_on)} ・ ${t.theme}</div>
+          <div class="jibun-meta">
+            <${ThemeDot} theme=${t.theme} />${shortDate(t.talked_on)} ・ ${t.theme}
+            ${t.source === 'ChatGPT' && ' ・ ChatGPTで話した'}
+            ${t.status === '途中' && html`<span class="jibun-badge">途中</span>`}
+          </div>
           <div class="jibun-talk__title">${t.title}</div>
           ${t.headline && html`<div class="jibun-talk__headline">${t.headline}</div>`}
           <details class="jibun-talk__more">
@@ -197,7 +222,7 @@ function Talks({ data, inFilter, filter }) {
 }
 
 // 問いを開いたとき・足すときのカード。文字を打つので上に出す
-function QuestionSheet({ q, initialText, initialTheme, onClose, onSave, onAdd }) {
+function QuestionSheet({ q, initialText, initialTheme, onClose, onSave, onAdd, onChatgpt }) {
   const [text, setText] = useState(q ? q.question : initialText || '');
   const [theme, setTheme] = useState(q ? q.theme : initialTheme || '人生観');
   const ref = useRef(null);
@@ -235,6 +260,7 @@ function QuestionSheet({ q, initialText, initialTheme, onClose, onSave, onAdd })
         ${q ? html`
           <div class="jibun-row">
             <button class="jibun-btn" onClick=${() => onSave(q, { ...edited(), status: '今日' }, '今日の問いにしました')}>今日はこれ</button>
+            <button class="jibun-btn jibun-btn--ghost" onClick=${() => onChatgpt({ q })}>ChatGPTで話す</button>
             <button class="jibun-btn jibun-btn--ghost" onClick=${() => onSave(q, { ...edited(), pinned: !q.pinned })}>${q.pinned ? '★をはずす' : '★ 気になる'}</button>
           </div>
           <div class="jibun-row jibun-row--between">
@@ -373,8 +399,27 @@ export function JibunView({ onToast, questionDraft, onQuestionDraftConsumed, key
 
   async function talk(q) {
     const text = claudePrompt(q);
-    try { await navigator.clipboard.writeText(text); } catch (e) { /* コピーできなくても開く */ }
     window.open('https://claude.ai/new?q=' + encodeURIComponent(text), '_blank');
+    try { await navigator.clipboard.writeText(text); } catch (e) { /* コピーできなくても開いている */ }
+  }
+
+  function resume(t) {
+    const text = claudeResumePrompt(t);
+    navigator.clipboard?.writeText(text).catch(() => {});
+    window.open('https://claude.ai/new?q=' + encodeURIComponent(text), '_blank');
+  }
+
+  // ChatGPTは頼み文が長いので、入力欄に入れて開き(長すぎれば開くだけ)、念のためコピーもしておく。
+  // iPhoneは待ってから開くと止められるので、先に開いてからコピーする
+  async function chatgpt({ q, talk }) {
+    const text = chatgptPrompt({ q, talk, insights: data.insights });
+    const url = 'https://chatgpt.com/?q=' + encodeURIComponent(text);
+    const prefilled = url.length < 8000;
+    window.open(prefilled ? url : 'https://chatgpt.com/', '_blank');
+    let copied = false;
+    try { await navigator.clipboard.writeText(text); copied = true; } catch (e) { /* 下で知らせる */ }
+    toast(copied ? '頼み文をコピーしました。入っていなければ貼り付けて送ってね'
+      : prefilled ? 'ChatGPTを開きました' : 'コピーできませんでした。もう一度押してね');
   }
 
   async function copy(q) {
@@ -416,6 +461,9 @@ export function JibunView({ onToast, questionDraft, onQuestionDraftConsumed, key
                 inFilter=${inFilter}
                 onOpen=${(q) => setSheet({ q })}
                 onTalk=${talk}
+                onChatgpt=${chatgpt}
+                onResume=${resume}
+                onResumeChatgpt=${(t) => chatgpt({ talk: t })}
                 onCopy=${copy}
                 onUnpick=${(q) => saveQuestion(q, { status: q.times_talked ? '話した' : 'ストック' }, '戻しました')}
               />`
@@ -435,6 +483,7 @@ export function JibunView({ onToast, questionDraft, onQuestionDraftConsumed, key
           onClose=${() => setSheet(null)}
           onSave=${saveQuestion}
           onAdd=${add}
+          onChatgpt=${chatgpt}
         />
       `}
     </div>
