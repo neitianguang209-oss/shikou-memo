@@ -1892,6 +1892,16 @@ body:has(.overlay--top) .toast {
   padding: 2px 12px;
 }
 
+/* 話した問い・答えが出た問いは、墨のように少し沈めて見せる */
+.jibun-card--sunk {
+  background: var(--bg-notes, var(--surface));
+  box-shadow: none;
+}
+
+.jibun-card--sunk .jibun-q__text {
+  color: var(--text-sub);
+}
+
 .jibun-today {
   background: var(--accent-soft);
   border: 1.5px solid var(--accent-deep);
@@ -2052,6 +2062,44 @@ body:has(.overlay--top) .toast {
   font-size: 15px;
   font-weight: 600;
   margin: 4px 0 6px;
+}
+
+.jibun-talk__headline {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 16px;
+  line-height: 1.7;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.jibun-talk__more {
+  margin-top: 8px;
+}
+
+.jibun-talk__more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  cursor: pointer;
+  list-style: none;
+}
+
+.jibun-talk__more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.jibun-talk__more > summary::after {
+  content: '▾';
+  transition: transform 0.15s;
+}
+
+.jibun-talk__more[open] > summary::after {
+  transform: rotate(180deg);
 }
 
 .jibun-talk__summary {

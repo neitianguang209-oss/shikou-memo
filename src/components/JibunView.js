@@ -80,7 +80,11 @@ function QuestionItem({ q, onOpen }) {
 
 function Questions({ data, inFilter, onOpen, onTalk, onCopy, onUnpick }) {
   const today = data.questions.find((q) => q.status === '今日');
-  const list = data.questions.filter((q) => q.status !== '今日' && q.status !== '決着' && inFilter(q.theme));
+  const open = data.questions.filter((q) => q.status !== '今日' && q.status !== '決着' && inFilter(q.theme));
+  // まだ話していない問いが上(★→新しい順)。話した問いは下に沈め、最近話したものほど下へ
+  const fresh = open.filter((q) => !q.times_talked);
+  const talked = open.filter((q) => q.times_talked)
+    .sort((a, b) => (a.last_talked || '').localeCompare(b.last_talked || ''));
   const done = data.questions.filter((q) => q.status === '決着' && inFilter(q.theme));
   return html`
     ${today ? html`
@@ -96,13 +100,19 @@ function Questions({ data, inFilter, onOpen, onTalk, onCopy, onUnpick }) {
       </div>
     ` : html`<p class="jibun-hint jibun-hint--lead">話したい問いをタップして「今日はこれ」にすると、Claudeがその問いから始めます。</p>`}
     <div class="jibun-card jibun-card--list">
-      ${list.length
-        ? list.map((q) => html`<${QuestionItem} key=${q.id} q=${q} onOpen=${onOpen} />`)
-        : html`<div class="jibun-empty">この分類の問いはまだありません。右下の＋で足せます。</div>`}
+      ${fresh.length
+        ? fresh.map((q) => html`<${QuestionItem} key=${q.id} q=${q} onOpen=${onOpen} />`)
+        : html`<div class="jibun-empty">${talked.length ? 'まだ話していない問いはありません。右下の＋で足せます。' : 'この分類の問いはまだありません。右下の＋で足せます。'}</div>`}
     </div>
+    ${talked.length > 0 && html`
+      <div class="jibun-section">話した問い</div>
+      <div class="jibun-card jibun-card--list jibun-card--sunk">
+        ${talked.map((q) => html`<${QuestionItem} key=${q.id} q=${q} onOpen=${onOpen} />`)}
+      </div>
+    `}
     ${done.length > 0 && html`
       <div class="jibun-section">答えが出た問い</div>
-      <div class="jibun-card jibun-card--list">
+      <div class="jibun-card jibun-card--list jibun-card--sunk">
         ${done.map((q) => html`<${QuestionItem} key=${q.id} q=${q} onOpen=${onOpen} />`)}
       </div>
     `}
@@ -173,9 +183,14 @@ function Talks({ data, inFilter, filter }) {
         <div key=${t.id} class="jibun-card jibun-talk">
           <div class="jibun-meta"><${ThemeDot} theme=${t.theme} />${shortDate(t.talked_on)} ・ ${t.theme}</div>
           <div class="jibun-talk__title">${t.title}</div>
-          <div class="jibun-talk__summary">${t.summary}</div>
-          ${(t.quotes || []).slice(0, 2).map((q, i) => html`<blockquote key=${i} class="jibun-talk__quote">「${q}」</blockquote>`)}
-          ${t.next_question && html`<p class="jibun-hint">次に話したい: ${t.next_question}</p>`}
+          ${t.headline && html`<div class="jibun-talk__headline">${t.headline}</div>`}
+          <details class="jibun-talk__more">
+            <summary>具体的には</summary>
+            <div class="jibun-talk__summary">${t.summary}</div>
+            ${(t.quotes || []).map((q, i) => html`<blockquote key=${i} class="jibun-talk__quote">「${q}」</blockquote>`)}
+            ${t.new_material && html`<p class="jibun-hint">新しく出た話: ${t.new_material}</p>`}
+            ${t.next_question && html`<p class="jibun-hint">次に話したい: ${t.next_question}</p>`}
+          </details>
         </div>
       `)}
   `;

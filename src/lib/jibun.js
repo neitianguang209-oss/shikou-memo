@@ -79,7 +79,7 @@ export function updateQuestion(id, patch) {
 }
 
 export function claudePrompt(q) {
-  return `今日の問い「${q.question}」(テーマ:${q.theme})について話そう。自分を知るトークで、聞き役として1つずつ深掘りして。終わったら保存して。`;
+  return `今日の問い「${q.question}」(テーマ:${q.theme})について話そう。自分を知るトークで、聞き役として1つずつ深掘りして。私が「バイバイ」と言ったら、確認なしで保存してまとめて終わりにして。`;
 }
 
 // '2026-10-31' → '10/31'
