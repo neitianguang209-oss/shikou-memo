@@ -2188,3 +2188,212 @@ body:has(.overlay--top) .toast {
   color: var(--accent-strong);
   font-weight: 600;
 }
+
+/* ---- ChatGPT とつなぐ・じぶん像 (v1.8.0) ---- */
+.jibun-q__answer {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--accent-strong);
+}
+
+.jibun-q__done {
+  color: var(--tag-green-fg);
+  font-weight: 700;
+}
+
+.jibun-pending {
+  background: var(--src-bg);
+  border: 1.5px solid var(--src-fg);
+}
+
+.jibun-pending__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--src-fg);
+}
+
+.jibun-pending__q {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 4px 0 0;
+}
+
+.jibun-pending .jibun-btn:not(.jibun-btn--plain) {
+  background: var(--src-fg);
+  color: #fff;
+}
+
+.jibun-import-link {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 18px 0 0;
+  border: 1px dashed var(--accent-deep);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--accent-strong);
+  font-size: 14px;
+}
+
+.jibun-import-link--top {
+  margin: 10px 0 0;
+}
+
+.jibun-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.jibun-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 2px;
+  border-radius: 12px;
+  background: var(--bubble);
+  box-shadow: var(--shadow-soft);
+}
+
+.jibun-stats b {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.jibun-stats span {
+  font-size: 10.5px;
+  color: var(--text-sub);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.jibun-shukatsu {
+  border: 1.5px solid var(--tag-blue-fg);
+}
+
+.jibun-shukatsu__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tag-blue-fg);
+}
+
+.jibun-shukatsu .jibun-row {
+  margin-top: 10px;
+}
+
+.jibun-shukatsu .jibun-btn--ghost {
+  border-color: var(--tag-blue-fg);
+  color: var(--tag-blue-fg);
+}
+
+.jibun-profile-lead .jibun-ins__s {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 16px;
+}
+
+.jibun-gap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--divider);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.jibun-gap:first-child {
+  padding-top: 0;
+}
+
+.jibun-gap:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.jibun-gap > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.jibun-gap__kind {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: var(--tag-blue-bg);
+  color: var(--tag-blue-fg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.jibun-btn--small {
+  flex: none;
+  min-height: 34px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.jibun-sheet__text--tall {
+  min-height: 180px;
+  font-size: 14px;
+}
+
+.jibun-hint--warn {
+  color: var(--sun);
+}
+
+.jibun-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jibun-preview__summary {
+  white-space: pre-wrap;
+  color: var(--text-sub);
+}
+
+.jibun-preview__ins {
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.jibun-preview__ins:last-child {
+  border-bottom: none;
+}
+
+.jibun-op {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 7px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--tag-gray-bg);
+  color: var(--tag-gray-fg);
+}
+
+.jibun-op--new {
+  background: var(--tag-green-bg);
+  color: var(--tag-green-fg);
+}
+
+.jibun-op--changed {
+  background: var(--tag-apricot-bg);
+  color: var(--tag-apricot-fg);
+}
+
+.jibun-op--withdrawn {
+  background: var(--tag-coral-bg);
+  color: var(--tag-coral-fg);
+}
+
+.segmented__item {
+  white-space: nowrap;
+}
