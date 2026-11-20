@@ -2,8 +2,8 @@ import htm from 'htm';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   THEMES, themeColorKey, readKey, writeKey, readCache, writeCache,
-  loadAll, addQuestion, updateQuestion, claudePrompt, claudeResumePrompt, chatgptPrompt, shortDate,
-  parseRecord, hasRecord, importTalk, readPending, writePending,
+  loadAll, addQuestion, updateQuestion, claudePrompt, claudeResumePrompt, chatgptPrompt, chatgptLongPrompt, shortDate,
+  parseRecord, hasRecord, importTalk, readPending, writePending, structureText, markSimilar, CHATGPT_INSTRUCTIONS,
   profileOf, gapsOf, profileText, GAP_QUESTIONS, SHUKATSU_MODES, shukatsuPrompt,
 } from '../lib/jibun.js';
 import { tagColorVars } from '../lib/tagColors.js';
@@ -83,21 +83,40 @@ function QuestionItem({ q, onOpen, last }) {
 }
 
 // ChatGPTで話しに行ったあと、戻ってきたら出る帯
-function PendingBanner({ pending, onImport, onDismiss }) {
+function PendingBanner({ pending, onImport, onDismiss, onLong }) {
   return html`
     <div class="jibun-card jibun-pending">
       <div class="jibun-pending__title">ChatGPTで話し中</div>
       <div class="jibun-pending__q">${pending.question || '(問い)'}</div>
-      <p class="jibun-hint">① ChatGPTに頼み文を貼って送る(コピー済み) ② 話し終わったら「バイバイ」 ③ 出てきた記録をコピーして、下のボタン。Claudeで話したのと同じように気づき・記録に入り、続きはどちらでも話せます。</p>
+      <p class="jibun-hint">① ChatGPTに問いが入っていなければ、コピー済みの文を貼って送る ② 話し終わったら「バイバイ」 ③ 出てきた記録(または話した内容のメモ)をコピーして、下のボタン。Claudeで話したのと同じように気づき・記録に入り、続きはどちらでも話せます。</p>
       <div class="jibun-row">
         <button class="jibun-btn" onClick=${onImport}>記録を取りこむ</button>
         <button class="jibun-btn jibun-btn--plain" onClick=${onDismiss}>話さなかった</button>
       </div>
+      <button class="jibun-import-link" onClick=${onLong}>ChatGPTに指示を入れていないとき: 長い頼み文をコピー</button>
     </div>
   `;
 }
 
-function Questions({ data, inFilter, onOpen, onTalk, onChatgpt, onCopy, onUnpick, onResume, onResumeChatgpt, pending, onImport, onDismissPending }) {
+// ChatGPTの「カスタム指示」に入れる文を渡す。1回入れれば、あとは問いだけの短い文で話せる
+function ChatgptSetup({ onCopy }) {
+  return html`
+    <details class="jibun-card jibun-setup">
+      <summary>ChatGPTを使う前の準備(1回だけ)</summary>
+      <p class="jibun-hint">ChatGPTに「じぶんトークのやり方」を覚えさせておくと、毎回長い文を貼らなくても、問いを開くだけで話せます。「じぶんトーク」で始まるメッセージのときだけ働くので、ふだんのChatGPTには影響しません。</p>
+      <ol class="jibun-setup__steps">
+        <li>下のボタンで指示文をコピー</li>
+        <li>ChatGPT → 設定 → パーソナライズ → カスタム指示 を開く</li>
+        <li>「どのように応答してほしいですか?」の欄に貼って保存</li>
+      </ol>
+      <div class="jibun-row">
+        <button class="jibun-btn" onClick=${onCopy}>指示文をコピー(${CHATGPT_INSTRUCTIONS.length}字)</button>
+      </div>
+    </details>
+  `;
+}
+
+function Questions({ data, inFilter, onOpen, onTalk, onChatgpt, onCopy, onUnpick, onResume, onResumeChatgpt, pending, onImport, onDismissPending, onLong, onCopyInstructions }) {
   const today = data.questions.find((q) => q.status === '今日');
   // 途中で切り上げた話(新しい順)。その問いは下の一覧には出さない
   const qById = Object.fromEntries(data.questions.map((q) => [q.id, q]));
@@ -115,7 +134,7 @@ function Questions({ data, inFilter, onOpen, onTalk, onChatgpt, onCopy, onUnpick
   const lastByQ = {};
   data.talks.forEach((t) => { if (t.question_id && t.status === '完了' && !lastByQ[t.question_id]) lastByQ[t.question_id] = t; });
   return html`
-    ${pending && html`<${PendingBanner} pending=${pending} onImport=${onImport} onDismiss=${onDismissPending} />`}
+    ${pending && html`<${PendingBanner} pending=${pending} onImport=${onImport} onDismiss=${onDismissPending} onLong=${onLong} />`}
     ${today ? html`
       <div class="jibun-card jibun-today">
         <div class="jibun-today__label"><${ThemeDot} theme=${today.theme} />今日の問い ・ ${today.theme}</div>
@@ -160,7 +179,8 @@ function Questions({ data, inFilter, onOpen, onTalk, onChatgpt, onCopy, onUnpick
         ${done.map((q) => html`<${QuestionItem} key=${q.id} q=${q} onOpen=${onOpen} last=${lastByQ[q.id]} />`)}
       </div>
     `}
-    <button class="jibun-import-link" onClick=${onImport}>ChatGPTで話した記録を取りこむ</button>
+    <button class="jibun-import-link" onClick=${onImport}>話した内容を貼って取りこむ(どこで話したものでも)</button>
+    <${ChatgptSetup} onCopy=${onCopyInstructions} />
   `;
 }
 
@@ -223,18 +243,101 @@ function Profile({ data, filter, onAddGap, onShukatsu, onCopy }) {
   `;
 }
 
-// ChatGPTの「記録のかたまり」を貼って取りこむ
+// 1件ぶんの確認表示。似た気づきには「同じにする/別にする」の切りかえを付ける
+function RecordPreview({ rec, insights, merges, onToggle }) {
+  const byShort = Object.fromEntries((insights || []).map((i) => [i.id.slice(0, 6), i]));
+  const opLabel = { new: '新しい', same: '同じ', changed: '変わった', withdrawn: '取り下げ' };
+  return html`
+    <div class="jibun-preview">
+      <div class="jibun-meta"><${ThemeDot} theme=${rec.theme || '人生観'} />${rec.theme || 'テーマなし'} ・ ${rec.talked_on ? shortDate(rec.talked_on) : '今日'}${rec.status === '途中' ? ' ・ 途中まで' : rec.answered ? ' ・ 答えが出た' : ''}${rec.question_id ? '' : ' ・ 新しい問い'}</div>
+      <div class="jibun-paused__q">${rec.question || '(問いなし)'}</div>
+      ${rec.headline && html`<div class="jibun-talk__headline">${rec.headline}</div>`}
+      ${rec.summary && html`<div class="jibun-talk__summary jibun-preview__summary">${rec.summary}</div>`}
+      ${rec.insights.length > 0 && html`
+        <div class="jibun-section">気づき ${rec.insights.length}件</div>
+        ${rec.insights.map((x, n) => {
+          const old = x.ref && byShort[x.ref];
+          const merged = x.similar && merges[n];
+          return html`
+            <div key=${n} class="jibun-preview__ins">
+              <span class=${`jibun-op jibun-op--${merged ? 'same' : x.op}`}>${opLabel[merged ? 'same' : x.op]}</span>
+              ${merged
+                ? x.similar.statement
+                : x.op === 'new' || x.op === 'changed'
+                  ? html`${x.op === 'changed' && old && html`<span class="jibun-ins__old">${old.statement}</span><span class="jibun-ins__arrow">→</span>`}${x.statement}`
+                  : old ? old.statement : '(前の気づき)'}
+              ${x.similar && html`
+                <div class="jibun-preview__sim">
+                  ${merged ? html`貼った文: ${x.statement}` : html`似ている気づき: ${x.similar.statement}`}
+                  <button class="jibun-btn jibun-btn--plain jibun-btn--small" onClick=${() => onToggle(n)}>${merged ? '別の気づきにする' : '同じにする'}</button>
+                </div>
+              `}
+            </div>
+          `;
+        })}
+      `}
+      ${rec.new_questions.length > 0 && html`<p class="jibun-hint">新しい問い: ${rec.new_questions.join(' / ')}</p>`}
+      ${rec.status === '途中' && rec.resume_note && html`<p class="jibun-hint">続きは: ${rec.resume_note}</p>`}
+    </div>
+  `;
+}
+
+// 話した内容を貼って取りこむ。
+// ① 決まった形の記録(ChatGPT・Claudeが出したもの)はそのまま読む ② ふつうの文章(どこで話した内容でも)は
+// 「整理する」でAIが記録の形に直す。どちらも確認画面を見てから保存する
 function ImportSheet({ initialText, insights, onClose, onImport }) {
   const [text, setText] = useState(initialText || '');
   const [busy, setBusy] = useState(false);
-  const rec = parseRecord(text);
-  const byShort = Object.fromEntries((insights || []).map((i) => [i.id.slice(0, 6), i]));
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiRecs, setAiRecs] = useState(null);
+  // 似た気づきを「同じ」として扱うか(記録の番号:気づきの番号 → true/false)。0.6以上は初めから同じにする
+  const [merges, setMerges] = useState({});
+
+  const parsed = parseRecord(text);
+  const recs = (aiRecs || (parsed ? [parsed] : null) || null);
+  const shown = recs ? recs.map((r) => markSimilar(r, insights)) : null;
+  const mergeOf = (ri, n) => {
+    const k = ri + ':' + n;
+    if (k in merges) return merges[k];
+    const x = shown[ri].insights[n];
+    return !!(x.similar && x.similar.score >= 0.6);
+  };
 
   async function paste() {
     try {
       const t = await navigator.clipboard.readText();
-      if (t) setText(t);
+      if (t) { setText(t); setAiRecs(null); setAiError(''); }
     } catch (e) { /* 長押しで貼ってもらう */ }
+  }
+
+  async function organize() {
+    setAiBusy(true);
+    setAiError('');
+    try {
+      const rs = await structureText(text.trim());
+      setAiRecs(rs);
+      setMerges({});
+    } catch (e) {
+      setAiError(e.message === 'bad key' ? '合言葉が違うようです'
+        : e.message === 'too long' ? '長すぎます(4万字まで)。半分に分けて貼ってください'
+        : '整理できませんでした。もう一度押すか、少し短くして試してください');
+    }
+    setAiBusy(false);
+  }
+
+  // 保存するときは、「同じ」にした気づきを same に置きかえて渡す
+  async function save() {
+    setBusy(true);
+    const out = shown.map((r, ri) => ({
+      ...r,
+      insights: r.insights.map((x, n) => {
+        const { similar, ...rest } = x;
+        return similar && mergeOf(ri, n) ? { op: 'same', ref: similar.id.slice(0, 6), strong: false, note: '' } : rest;
+      }),
+    }));
+    await onImport(out);
+    setBusy(false);
   }
 
   useEffect(() => {
@@ -243,50 +346,43 @@ function ImportSheet({ initialText, insights, onClose, onImport }) {
     return () => document.removeEventListener('keydown', onKey, true);
   }, []);
 
-  const opLabel = { new: '新しい', same: '同じ', changed: '変わった', withdrawn: '取り下げ' };
+  const canOrganize = text.trim().length >= 30;
   return html`
     <div class="overlay overlay--top" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div class="modal-card jibun-sheet" role="dialog" aria-label="ChatGPTの記録を取りこむ">
-        <div class="modal-card__title">ChatGPTの記録を取りこむ</div>
-        ${!rec ? html`
+      <div class="modal-card jibun-sheet" role="dialog" aria-label="話した内容を取りこむ">
+        <div class="modal-card__title">話した内容を取りこむ</div>
+        ${!shown ? html`
           <textarea
             class="jibun-sheet__text jibun-sheet__text--tall"
-            placeholder="【じぶんトークの記録】から【ここまで】までを貼り付け"
+            placeholder="話した内容をそのまま貼り付け(ChatGPTやClaudeの会話・まとめ、ボイスメモの文字起こし、自分で書いた振り返りなど、形は何でもOK)。複数の話が混ざっていても、分けて整理します。"
             value=${text}
-            onInput=${(e) => setText(e.target.value)}
+            onInput=${(e) => { setText(e.target.value); setAiError(''); }}
           ></textarea>
-          ${text.trim() && html`<p class="jibun-hint jibun-hint--warn">記録のかたまりが見つかりません。ChatGPTに「バイバイ」と送ると出てきます。</p>`}
+          ${aiError && html`<p class="jibun-hint jibun-hint--warn">${aiError}</p>`}
+          ${aiBusy && html`<p class="jibun-hint">整理しています…(10〜40秒かかります。閉じずに待ってね)</p>`}
           <div class="jibun-row jibun-row--between">
             <button class="jibun-btn jibun-btn--plain" onClick=${onClose}>閉じる</button>
-            <button class="jibun-btn" onClick=${paste}>貼り付け</button>
+            <span>
+              <button class="jibun-btn jibun-btn--ghost" disabled=${aiBusy} onClick=${paste}>貼り付け</button>
+              <button class="jibun-btn" disabled=${!canOrganize || aiBusy} onClick=${organize}>${aiBusy ? '整理中…' : '整理する'}</button>
+            </span>
           </div>
+          <p class="jibun-hint">「整理する」は、問い・今日の一言・具体的には・気づきの形にAIが直します。保存の前に、中身を確認できます。</p>
         ` : html`
-          <div class="jibun-preview">
-            <div class="jibun-meta"><${ThemeDot} theme=${rec.theme || '人生観'} />${rec.theme || 'テーマなし'} ・ ${rec.talked_on ? shortDate(rec.talked_on) : '今日'}${rec.status === '途中' ? ' ・ 途中まで' : rec.answered ? ' ・ 答えが出た' : ''}</div>
-            <div class="jibun-paused__q">${rec.question || '(問いなし)'}</div>
-            ${rec.headline && html`<div class="jibun-talk__headline">${rec.headline}</div>`}
-            ${rec.summary && html`<div class="jibun-talk__summary jibun-preview__summary">${rec.summary}</div>`}
-            ${rec.insights.length > 0 && html`
-              <div class="jibun-section">気づき ${rec.insights.length}件</div>
-              ${rec.insights.map((x, n) => {
-                const old = x.ref && byShort[x.ref];
-                return html`
-                  <div key=${n} class="jibun-preview__ins">
-                    <span class=${`jibun-op jibun-op--${x.op}`}>${opLabel[x.op]}</span>
-                    ${x.op === 'new' || x.op === 'changed'
-                      ? html`${x.op === 'changed' && old && html`<span class="jibun-ins__old">${old.statement}</span><span class="jibun-ins__arrow">→</span>`}${x.statement}`
-                      : old ? old.statement : '(前の気づき)'}
-                  </div>
-                `;
-              })}
-            `}
-            ${rec.new_questions.length > 0 && html`<p class="jibun-hint">新しい問い: ${rec.new_questions.join(' / ')}</p>`}
-            ${rec.status === '途中' && rec.resume_note && html`<p class="jibun-hint">続きは: ${rec.resume_note}</p>`}
-          </div>
+          ${shown.length > 1 && html`<p class="jibun-hint">${shown.length}件の話に分けました。</p>`}
+          ${shown.map((r, ri) => html`
+            <${RecordPreview}
+              key=${ri}
+              rec=${r}
+              insights=${insights}
+              merges=${Object.fromEntries(r.insights.map((x, n) => [n, mergeOf(ri, n)]))}
+              onToggle=${(n) => setMerges((m) => ({ ...m, [ri + ':' + n]: !mergeOf(ri, n) }))}
+            />
+          `)}
           <div class="jibun-row jibun-row--between">
-            <button class="jibun-btn jibun-btn--plain" onClick=${() => setText('')}>貼り直す</button>
-            <button class="jibun-btn" disabled=${busy} onClick=${async () => { setBusy(true); await onImport(rec); setBusy(false); }}>
-              ${busy ? '保存中…' : '保存する'}
+            <button class="jibun-btn jibun-btn--plain" onClick=${() => { setText(''); setAiRecs(null); setMerges({}); }}>貼り直す</button>
+            <button class="jibun-btn" disabled=${busy} onClick=${save}>
+              ${busy ? '保存中…' : shown.length > 1 ? `${shown.length}件を保存する` : '保存する'}
             </button>
           </div>
         `}
@@ -348,7 +444,7 @@ function Talks({ data, inFilter, filter, onImport }) {
   const talks = data.talks.filter((t) => inFilter(t.theme));
   const report = filter === 'すべて' && data.reports.length ? data.reports[0] : null;
   return html`
-    <button class="jibun-import-link jibun-import-link--top" onClick=${onImport}>ChatGPTで話した記録を取りこむ</button>
+    <button class="jibun-import-link jibun-import-link--top" onClick=${onImport}>話した内容を貼って取りこむ(どこで話したものでも)</button>
     ${report && html`
       <div class="jibun-section">今週の変化レポート(${shortDate(report.period_start)}〜${shortDate(report.period_end)})</div>
       <div class="jibun-card jibun-report">${report.body}</div>
@@ -600,33 +696,68 @@ export function JibunView({ onToast, questionDraft, onQuestionDraftConsumed, key
     let text = '';
     try {
       const t = await navigator.clipboard.readText();
-      if (hasRecord(t)) text = t;
+      // 決まった形の記録か、長めの文章(話した内容のメモ)ならそのまま入れておく
+      if (hasRecord(t) || (t || '').trim().length >= 150) text = t;
     } catch (e) { /* 読めなければ貼ってもらう */ }
     setImporting({ text, token: Date.now() });
   }
 
-  async function doImport(rec) {
+  // 取りこむ記録(1件でも複数でも)を順に保存する
+  async function doImport(recs) {
     if (offline) { toast('つながっていないので保存できません'); return; }
+    const list = Array.isArray(recs) ? recs : [recs];
+    const sum = { saved: 0, dup: 0, new: 0, changed: 0, same: 0, questions: 0, paused: 0, settled: 0 };
     try {
-      const r = await importTalk(rec);
+      for (const rec of list) {
+        const r = await importTalk(rec);
+        if (r.duplicate) { sum.dup++; continue; }
+        sum.saved++;
+        sum.new += r.new || 0; sum.changed += r.changed || 0; sum.same += r.same || 0; sum.questions += r.questions || 0;
+        if (r.status === '途中') sum.paused++;
+        if (r.question_status === '決着') sum.settled++;
+      }
       setImporting(null);
       writePending(null);
       setPending(null);
-      if (r.duplicate) {
+      if (!sum.saved) {
         toast('この記録はもう入っています');
       } else {
         const parts = [];
-        if (r.new) parts.push(`新しい気づき${r.new}`);
-        if (r.changed) parts.push(`変化${r.changed}`);
-        if (r.same) parts.push(`確かめた${r.same}`);
-        if (r.questions) parts.push(`問い+${r.questions}`);
-        const head = r.status === '途中' ? '途中まで保存しました' : r.question_status === '決着' ? '保存して、問いを「答えが出た」にしました' : '保存しました';
+        if (sum.new) parts.push(`新しい気づき${sum.new}`);
+        if (sum.changed) parts.push(`変化${sum.changed}`);
+        if (sum.same) parts.push(`確かめた${sum.same}`);
+        if (sum.questions) parts.push(`問い+${sum.questions}`);
+        const head = sum.saved > 1 ? `${sum.saved}件保存しました`
+          : sum.paused ? '途中まで保存しました'
+          : sum.settled ? '保存して、問いを「答えが出た」にしました' : '保存しました';
         toast(head + (parts.length ? `(${parts.join('・')})` : ''));
-        setSection(r.status === '途中' ? 'questions' : 'talks');
+        setSection(sum.paused === sum.saved ? 'questions' : 'talks');
       }
       await load();
     } catch (e) {
       toast(e.message === 'bad key' ? '合言葉が違うようです' : '保存できませんでした。もう一度押してね');
+      await load();
+    }
+  }
+
+  // ChatGPTに指示を入れていないときのため、全部入りの長い頼み文をコピー
+  async function copyLong() {
+    const q = data.questions.find((x) => x.id === (pending && pending.question_id))
+      || { question: pending ? pending.question : '', theme: '人生観' };
+    try {
+      await navigator.clipboard.writeText(chatgptLongPrompt({ q, insights: data.insights, talks: data.talks }));
+      toast('長い頼み文をコピーしました。ChatGPTに貼って送ってね');
+    } catch (e) {
+      toast('コピーできませんでした');
+    }
+  }
+
+  async function copyInstructions() {
+    try {
+      await navigator.clipboard.writeText(CHATGPT_INSTRUCTIONS);
+      toast('指示文をコピーしました。ChatGPTのカスタム指示に貼ってね');
+    } catch (e) {
+      toast('コピーできませんでした');
     }
   }
 
@@ -692,6 +823,8 @@ export function JibunView({ onToast, questionDraft, onQuestionDraftConsumed, key
                 onUnpick=${(q) => saveQuestion(q, { status: q.times_talked ? '話した' : 'ストック' }, '戻しました')}
                 pending=${pending}
                 onImport=${openImport}
+                onLong=${copyLong}
+                onCopyInstructions=${copyInstructions}
                 onDismissPending=${() => { writePending(null); setPending(null); }}
               />`
             : section === 'profile' ? html`<${Profile}

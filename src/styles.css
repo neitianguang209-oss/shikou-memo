@@ -2397,3 +2397,40 @@ body:has(.overlay--top) .toast {
 .segmented__item {
   white-space: nowrap;
 }
+
+/* じぶん: 似た気づきの「同じにする」・ChatGPTの準備 */
+.jibun-preview__sim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-sub);
+}
+
+.jibun-preview + .jibun-preview {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+
+.jibun-setup {
+  margin-top: 14px;
+}
+
+.jibun-setup > summary {
+  cursor: pointer;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+
+.jibun-setup__steps {
+  margin: 8px 0 12px;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.8;
+}

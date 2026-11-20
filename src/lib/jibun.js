@@ -108,7 +108,62 @@ function currentInsights(insights, theme) {
 
 const FENCE = '```';
 
-export function chatgptPrompt({ q, talk, insights, talks }) {
+// ChatGPT用の指示文(ChatGPTの「カスタム指示」に1回貼っておく。1500字以内)。
+// 「じぶんトーク」で始まるメッセージのときだけ働くので、ほかの会話には影響しない。
+// これを入れておけば、アプリから開くときの頼み文は「じぶんトーク＋問い」だけの短い文で済む
+// (長い文は ChatGPT のリンクに入りきらず、開いても文章が入らなかった)
+export const CHATGPT_INSTRUCTIONS = `【じぶんトーク】
+メッセージが「じぶんトーク」で始まるときだけ、以下のルールで動く。ほかの会話では使わない。
+・私の「自分を知るトーク」の聞き役。質問は1回に1つ、短く。講義や長い箇条書きはしない。
+・渡された問いに、「なぜ?」「具体的には?」「そのとき何を感じた?」で1〜2段ずつ深掘りする。5〜10往復が目安。経験談が出たら、数字・時期・自分の行動を1つ聞く。
+・私の言葉を言い換えて決めつけない。まとめるときは「〜ってこと?」と確かめる。恋愛・家族は話したい深さまで。
+・答えが出たと感じたら「これで答えが出た感じ?」と1回だけ聞く。
+・「バイバイ」「おわり」と言われたら、質問も確認もせず、下の記録をコードブロック1つで出して終わる。「いったんここまで」なら状態を途中にする。私が言っていないことは書かない。項目名と | は変えない。
+【記録の形】
+【じぶんトークの記録】
+日付: YYYY-MM-DD
+問い: (渡された問い)
+問いのid: (渡されたid。無ければなし)
+テーマ: (渡されたテーマ)
+状態: 完了 か 途中
+答え: 出た か まだ
+今日の一言: 今日分かった自分を40字まで
+具体的には: 流れと結論を3〜5文
+私の言葉: 「そのままの言い回し」を2〜4個
+新しく出た話: 新しい経験・事実。無ければ なし
+キーワード: 読点区切りで2〜4個
+気づき:
+- 新しい | 種類 | 文
+新しく生まれた問い:
+- 問い(無ければ なし)
+次に聞くこと: 1つ
+【ここまで】
+種類は 一言の自分/価値観/幸福観/強み/弱み/動き方のクセ/感情のクセ/やりたいこと/避けたいこと/企業選びの軸/働き方の条件/キャリア仮説/恋愛観/人との関わり方 から選ぶ。`;
+
+function clip(s, n) {
+  const t = (s || '').replace(/\s+/g, ' ').trim();
+  return t.length > n ? t.slice(0, n) + '…' : t;
+}
+
+// ChatGPTを開くときの短い頼み文(指示文はChatGPT側に入っている前提)。
+// 長いとリンクに入りきらないので、問い・id・テーマ(と、途中なら要点)だけ
+export function chatgptPrompt({ q, talk }) {
+  const theme = (q && q.theme) || (talk && talk.theme) || '人生観';
+  const question = (q && q.question) || (talk && (talk.question || talk.title)) || '';
+  const qid = (q && q.id) || (talk && talk.question_id) || 'なし';
+  const resume = talk
+    ? `\n前回の途中: ${clip(talk.summary, 220)}\n次に聞くこと: ${clip(talk.resume_note, 80) || 'なし'}`
+    : '';
+  return `じぶんトーク
+問い: ${question}
+問いのid: ${qid}
+テーマ: ${theme}${resume}
+この問いから始めてください。`;
+}
+
+// 指示文をChatGPTに入れていないとき用の、全部入りの長い頼み文(今の考え・書き方つき)。
+// 長いのでリンクには入れず、コピーして貼ってもらう
+export function chatgptLongPrompt({ q, talk, insights, talks }) {
   const theme = (q && q.theme) || (talk && talk.theme) || '人生観';
   const question = (q && q.question) || (talk && (talk.question || talk.title)) || '';
   const qid = (q && q.id) || (talk && talk.question_id) || 'なし';
@@ -290,6 +345,63 @@ export function parseRecord(text) {
 
 export function importTalk(record) {
   return api('import_talk', record);
+}
+
+// ---- どこで話した内容でも、そのまま貼って整理する ----
+// 形のばらばらな文章(ChatGPT・Claudeの会話、ボイスメモの文字起こし、自分の振り返り)を、
+// サーバー側の関数 jibun-structure(Gemini)が「話した記録」の形に直して返す。保存は確認のあと
+const STRUCTURE_URL = 'https://gzayrjlhruhvklsidraw.supabase.co/functions/v1/jibun-structure';
+
+export async function structureText(text) {
+  const res = await fetch(STRUCTURE_URL, {
+    method: 'POST',
+    headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key: readKey(), text }),
+  });
+  if (!res.ok) {
+    let err = '';
+    try { err = (await res.json()).error || ''; } catch (e) { /* 本文なし */ }
+    throw new Error(err === 'bad key' ? 'bad key' : err === 'too long' ? 'too long' : 'ai failed');
+  }
+  const j = await res.json();
+  return (j.records || []).map((r) => ({
+    ...r,
+    import_key: hash([r.question, r.talked_on, r.status, r.headline, r.summary].join('|')),
+  }));
+}
+
+// 文字を2文字ずつに割って重なりを見る(言い回しが少し違うだけの同じ気づきを見つける)
+function bigrams(s) {
+  const t = (s || '').replace(/[\s、。,.「」『』()()・!?!?〜~ー]/g, '');
+  const set = new Set();
+  for (let i = 0; i < t.length - 1; i++) set.add(t.slice(i, i + 2));
+  return set;
+}
+
+export function similarity(a, b) {
+  const A = bigrams(a); const B = bigrams(b);
+  if (!A.size || !B.size) return 0;
+  let n = 0;
+  A.forEach((x) => { if (B.has(x)) n++; });
+  return (2 * n) / (A.size + B.size);
+}
+
+// 「新しい」気づきのうち、いまの気づきとよく似たものに、似た相手(similar)を付ける。
+// 0.6以上は初めから「同じ」として扱う提案、0.42以上は「似ているかも」と知らせるだけ
+export function markSimilar(rec, insights) {
+  const pool = (insights || []).filter((i) => i.status === '今の考え' || i.status === '未解決');
+  return {
+    ...rec,
+    insights: rec.insights.map((x) => {
+      if (x.op !== 'new') return x;
+      let best = null;
+      for (const i of pool) {
+        const sc = similarity(x.statement, i.statement);
+        if (sc >= 0.42 && (!best || sc > best.score)) best = { id: i.id, statement: i.statement, score: sc };
+      }
+      return best ? { ...x, similar: best } : x;
+    }),
+  };
 }
 
 // ChatGPTで話しに行った問い(この端末で覚えておき、戻ってきたら「取りこむ」を出す)
