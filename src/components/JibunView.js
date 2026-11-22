@@ -349,37 +349,41 @@ function ImportSheet({ initialText, insights, onClose, onImport }) {
   const canOrganize = text.trim().length >= 30;
   return html`
     <div class="overlay overlay--top" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div class="modal-card jibun-sheet" role="dialog" aria-label="話した内容を取りこむ">
+      <div class="modal-card jibun-sheet jibun-sheet--fixed-foot" role="dialog" aria-label="話した内容を取りこむ">
         <div class="modal-card__title">話した内容を取りこむ</div>
         ${!shown ? html`
-          <textarea
-            class="jibun-sheet__text jibun-sheet__text--tall"
-            placeholder="話した内容をそのまま貼り付け(ChatGPTやClaudeの会話・まとめ、ボイスメモの文字起こし、自分で書いた振り返りなど、形は何でもOK)。複数の話が混ざっていても、分けて整理します。"
-            value=${text}
-            onInput=${(e) => { setText(e.target.value); setAiError(''); }}
-          ></textarea>
-          ${aiError && html`<p class="jibun-hint jibun-hint--warn">${aiError}</p>`}
-          ${aiBusy && html`<p class="jibun-hint">整理しています…(10〜40秒かかります。閉じずに待ってね)</p>`}
-          <div class="jibun-row jibun-row--between">
+          <div class="jibun-sheet__body">
+            <textarea
+              class="jibun-sheet__text jibun-sheet__text--tall"
+              placeholder="話した内容をそのまま貼り付け(ChatGPTやClaudeの会話・まとめ、ボイスメモの文字起こし、自分で書いた振り返りなど、形は何でもOK)。複数の話が混ざっていても、分けて整理します。"
+              value=${text}
+              onInput=${(e) => { setText(e.target.value); setAiError(''); }}
+            ></textarea>
+            ${aiError && html`<p class="jibun-hint jibun-hint--warn">${aiError}</p>`}
+            ${aiBusy && html`<p class="jibun-hint">整理しています…(10〜40秒かかります。閉じずに待ってね)</p>`}
+            <p class="jibun-hint">「整理する」は、問い・今日の一言・具体的には・気づきの形にAIが直します。保存の前に、中身を確認できます。</p>
+          </div>
+          <div class="jibun-sheet__foot jibun-row jibun-row--between">
             <button class="jibun-btn jibun-btn--plain" onClick=${onClose}>閉じる</button>
             <span>
               <button class="jibun-btn jibun-btn--ghost" disabled=${aiBusy} onClick=${paste}>貼り付け</button>
               <button class="jibun-btn" disabled=${!canOrganize || aiBusy} onClick=${organize}>${aiBusy ? '整理中…' : '整理する'}</button>
             </span>
           </div>
-          <p class="jibun-hint">「整理する」は、問い・今日の一言・具体的には・気づきの形にAIが直します。保存の前に、中身を確認できます。</p>
         ` : html`
-          ${shown.length > 1 && html`<p class="jibun-hint">${shown.length}件の話に分けました。</p>`}
-          ${shown.map((r, ri) => html`
-            <${RecordPreview}
-              key=${ri}
-              rec=${r}
-              insights=${insights}
-              merges=${Object.fromEntries(r.insights.map((x, n) => [n, mergeOf(ri, n)]))}
-              onToggle=${(n) => setMerges((m) => ({ ...m, [ri + ':' + n]: !mergeOf(ri, n) }))}
-            />
-          `)}
-          <div class="jibun-row jibun-row--between">
+          <div class="jibun-sheet__body">
+            ${shown.length > 1 && html`<p class="jibun-hint">${shown.length}件の話に分けました。下の「保存する」はいつも画面の下に出ています。</p>`}
+            ${shown.map((r, ri) => html`
+              <${RecordPreview}
+                key=${ri}
+                rec=${r}
+                insights=${insights}
+                merges=${Object.fromEntries(r.insights.map((x, n) => [n, mergeOf(ri, n)]))}
+                onToggle=${(n) => setMerges((m) => ({ ...m, [ri + ':' + n]: !mergeOf(ri, n) }))}
+              />
+            `)}
+          </div>
+          <div class="jibun-sheet__foot jibun-row jibun-row--between">
             <button class="jibun-btn jibun-btn--plain" onClick=${() => { setText(''); setAiRecs(null); setMerges({}); }}>貼り直す</button>
             <button class="jibun-btn" disabled=${busy} onClick=${save}>
               ${busy ? '保存中…' : shown.length > 1 ? `${shown.length}件を保存する` : '保存する'}

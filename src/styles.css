@@ -2434,3 +2434,27 @@ body:has(.overlay--top) .toast {
   font-size: 13px;
   line-height: 1.8;
 }
+
+/* 取りこみカード: 中身だけスクロールし、ボタンの行はいつも画面の下に見える(長くても保存できる) */
+.overlay--top > .jibun-sheet--fixed-foot {
+  max-height: calc(min(var(--vvh, 100dvh), 100dvh) - 16px - env(safe-area-inset-top));
+  overflow: hidden;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+
+.jibun-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jibun-sheet__foot {
+  flex: 0 0 auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--divider);
+}
