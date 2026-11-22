@@ -2523,3 +2523,60 @@ body:has(.overlay--top) .toast {
 .jibun-pasttalk[open] > summary {
   margin-bottom: 6px;
 }
+
+/* 取りこみ: この問いの話 / ほかの問いにも結ぶ */
+.jibun-fixedq {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--bg-notes);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.jibun-links {
+  margin-top: 10px;
+  padding: 6px 12px 10px;
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+}
+
+.jibun-links > summary {
+  cursor: pointer;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.jibun-links__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.jibun-link {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: transparent;
+}
+
+.jibun-link.is-active {
+  background: var(--bg-notes);
+  border-color: var(--accent-deep);
+  font-weight: 600;
+}

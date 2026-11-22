@@ -493,3 +493,17 @@ ${m.ask}
 export function shortDate(s) {
   return (s || '').slice(5, 10).replace('-', '/');
 }
+
+// 同じ話を、ほかの問いにも結んで保存するためのコピー。
+// 気づきは元の1件だけに入れる(同じ話から気づきが重複して増えないように)。話した回数は問いごとに数える
+export function linkedRecord(rec, q) {
+  return {
+    ...rec,
+    question_id: q.id,
+    question: q.question,
+    theme: q.theme || rec.theme,
+    insights: [],
+    new_questions: [],
+    import_key: (rec.import_key || '') + ':' + q.id,
+  };
+}

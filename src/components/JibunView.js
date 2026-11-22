@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   THEMES, themeColorKey, readKey, writeKey, readCache, writeCache,
   loadAll, addQuestion, updateQuestion, claudePrompt, claudeResumePrompt, chatgptPrompt, chatgptLongPrompt, shortDate,
-  parseRecord, hasRecord, importTalk, readPending, writePending, structureText, markSimilar, CHATGPT_INSTRUCTIONS,
+  parseRecord, hasRecord, importTalk, linkedRecord, similarity, readPending, writePending, structureText, markSimilar, CHATGPT_INSTRUCTIONS,
   profileOf, gapsOf, profileText, GAP_QUESTIONS, SHUKATSU_MODES, shukatsuPrompt,
 } from '../lib/jibun.js';
 import { tagColorVars } from '../lib/tagColors.js';
@@ -283,10 +283,37 @@ function RecordPreview({ rec, insights, merges, onToggle }) {
   `;
 }
 
+// 同じ話をほかの問いにも結ぶ(バイト・腹が立った出来事・人間関係・理想のあり方 など、1つの話が複数の問いにまたがるとき)
+function QuestionLinks({ rec, questions, primaryId, picked, onToggle }) {
+  const text = [rec.headline, rec.summary, rec.question].join(' ');
+  const list = questions
+    .filter((q) => q.id !== primaryId && q.status !== '決着')
+    .map((q) => ({ q, score: similarity(q.question, text) }))
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.q);
+  if (!list.length) return null;
+  return html`
+    <details class="jibun-links" open=${picked.size > 0}>
+      <summary>ほかの問いにも結ぶ${picked.size ? `(${picked.size}件選択中)` : ''}</summary>
+      <p class="jibun-hint">同じエピソードが、ほかの問いの答えにもなっているときに選びます。話した回数は問いごとに数え、気づきは重ねて増やしません。</p>
+      <div class="jibun-links__list">
+        ${list.map((q) => html`
+          <button
+            key=${q.id}
+            type="button"
+            class=${`jibun-link${picked.has(q.id) ? ' is-active' : ''}`}
+            onClick=${() => onToggle(q.id)}
+          ><${ThemeDot} theme=${q.theme} />${q.question}</button>
+        `)}
+      </div>
+    </details>
+  `;
+}
+
 // 話した内容を貼って取りこむ。
 // ① 決まった形の記録(ChatGPT・Claudeが出したもの)はそのまま読む ② ふつうの文章(どこで話した内容でも)は
 // 「整理する」でAIが記録の形に直す。どちらも確認画面を見てから保存する
-function ImportSheet({ initialText, insights, onClose, onImport }) {
+function ImportSheet({ initialText, insights, questions, fixedQuestion, onClose, onImport }) {
   const [text, setText] = useState(initialText || '');
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
@@ -294,9 +321,20 @@ function ImportSheet({ initialText, insights, onClose, onImport }) {
   const [aiRecs, setAiRecs] = useState(null);
   // 似た気づきを「同じ」として扱うか(記録の番号:気づきの番号 → true/false)。0.6以上は初めから同じにする
   const [merges, setMerges] = useState({});
+  // 1つの話をほかの問いにも結ぶ(記録の番号 → 問いidの集まり)
+  const [links, setLinks] = useState({});
 
   const parsed = parseRecord(text);
-  const recs = (aiRecs || (parsed ? [parsed] : null) || null);
+  const rawRecs = (aiRecs || (parsed ? [parsed] : null) || null);
+  // 「この問いの話を貼る」から来たときは、どの記録も最初からその問いに結ぶ
+  const recs = rawRecs && fixedQuestion
+    ? rawRecs.map((r) => ({ ...r, question_id: fixedQuestion.id, question: fixedQuestion.question, theme: fixedQuestion.theme || r.theme }))
+    : rawRecs;
+  const toggleLink = (ri, id) => setLinks((m) => {
+    const set = new Set(m[ri] || []);
+    set.has(id) ? set.delete(id) : set.add(id);
+    return { ...m, [ri]: set };
+  });
   const shown = recs ? recs.map((r) => markSimilar(r, insights)) : null;
   const mergeOf = (ri, n) => {
     const k = ri + ':' + n;
@@ -337,7 +375,11 @@ function ImportSheet({ initialText, insights, onClose, onImport }) {
         return similar && mergeOf(ri, n) ? { op: 'same', ref: similar.id.slice(0, 6), strong: false, note: '' } : rest;
       }),
     }));
-    await onImport(out);
+    // ほかの問いにも結んだ分は、同じ話のコピー(気づきなし)として足す
+    const qById = Object.fromEntries((questions || []).map((q) => [q.id, q]));
+    const extra = [];
+    out.forEach((r, ri) => (links[ri] ? [...links[ri]] : []).forEach((id) => { if (qById[id]) extra.push(linkedRecord(r, qById[id])); }));
+    await onImport([...out, ...extra]);
     setBusy(false);
   }
 
@@ -352,12 +394,13 @@ function ImportSheet({ initialText, insights, onClose, onImport }) {
   return createPortal(html`
     <div class="overlay overlay--full" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div class="modal-card jibun-sheet jibun-sheet--fixed-foot" role="dialog" aria-label="話した内容を取りこむ">
-        <div class="modal-card__title">話した内容を取りこむ</div>
+        <div class="modal-card__title">${fixedQuestion ? 'この問いの話を取りこむ' : '話した内容を取りこむ'}</div>
+        ${fixedQuestion && html`<div class="jibun-fixedq"><${ThemeDot} theme=${fixedQuestion.theme} />${fixedQuestion.question}</div>`}
         ${!shown ? html`
           <div class="jibun-sheet__body">
             <textarea
               class="jibun-sheet__text jibun-sheet__text--tall"
-              placeholder="話した内容をそのまま貼り付け(ChatGPTやClaudeの会話・まとめ、ボイスメモの文字起こし、自分で書いた振り返りなど、形は何でもOK)。複数の話が混ざっていても、分けて整理します。"
+              placeholder=${fixedQuestion ? "この問いについて話した内容をそのまま貼り付け(ChatGPTやClaudeの会話・まとめ、ボイスメモの文字起こしなど、形は何でもOK)。" : "話した内容をそのまま貼り付け(ChatGPTやClaudeの会話・まとめ、ボイスメモの文字起こし、自分で書いた振り返りなど、形は何でもOK)。複数の話が混ざっていても、分けて整理します。"}
               value=${text}
               onInput=${(e) => { setText(e.target.value); setAiError(''); }}
             ></textarea>
@@ -383,13 +426,20 @@ function ImportSheet({ initialText, insights, onClose, onImport }) {
                 merges=${Object.fromEntries(r.insights.map((x, n) => [n, mergeOf(ri, n)]))}
                 onToggle=${(n) => setMerges((m) => ({ ...m, [ri + ':' + n]: !mergeOf(ri, n) }))}
               />
+              <${QuestionLinks}
+                rec=${r}
+                questions=${questions || []}
+                primaryId=${r.question_id}
+                picked=${links[ri] || new Set()}
+                onToggle=${(id) => toggleLink(ri, id)}
+              />
             `)}
             <button class="jibun-btn jibun-btn--wide" disabled=${busy} onClick=${save}>
               ${busy ? '保存中…' : shown.length > 1 ? `ここまで確認したら ${shown.length}件を保存する` : 'ここまで確認したら保存する'}
             </button>
           </div>
           <div class="jibun-sheet__foot jibun-row jibun-row--between">
-            <button class="jibun-btn jibun-btn--plain" onClick=${() => { setText(''); setAiRecs(null); setMerges({}); }}>貼り直す</button>
+            <button class="jibun-btn jibun-btn--plain" onClick=${() => { setText(''); setAiRecs(null); setMerges({}); setLinks({}); }}>貼り直す</button>
             <button class="jibun-btn" disabled=${busy} onClick=${save}>
               ${busy ? '保存中…' : shown.length > 1 ? `${shown.length}件を保存する` : '保存する'}
             </button>
@@ -505,7 +555,7 @@ function PastTalks({ talks }) {
   `;
 }
 
-function QuestionSheet({ q, talks, initialText, initialTheme, onClose, onSave, onAdd, onChatgpt }) {
+function QuestionSheet({ q, talks, onPaste, initialText, initialTheme, onClose, onSave, onAdd, onChatgpt }) {
   const [text, setText] = useState(q ? q.question : initialText || '');
   const [theme, setTheme] = useState(q ? q.theme : initialTheme || '人生観');
   const ref = useRef(null);
@@ -544,6 +594,7 @@ function QuestionSheet({ q, talks, initialText, initialTheme, onClose, onSave, o
           <div class="jibun-row">
             <button class="jibun-btn" onClick=${() => onSave(q, { ...edited(), status: '今日' }, '今日の問いにしました')}>今日はこれ</button>
             <button class="jibun-btn jibun-btn--ghost" onClick=${() => onChatgpt({ q })}>ChatGPTで話す</button>
+            <button class="jibun-btn jibun-btn--ghost" onClick=${() => onPaste(q)}>この問いの話を貼る</button>
             <button class="jibun-btn jibun-btn--ghost" onClick=${() => onSave(q, { ...edited(), pinned: !q.pinned })}>${q.pinned ? '★をはずす' : '★ 気になる'}</button>
           </div>
           <div class="jibun-row jibun-row--between">
@@ -724,14 +775,14 @@ export function JibunView({ onToast, questionDraft, onQuestionDraftConsumed, key
   }
 
   // 「取りこむ」を押したら、まずクリップボードを見る(記録が入っていればそのまま確認画面)
-  async function openImport() {
+  async function openImport(fixedQ) {
     let text = '';
     try {
       const t = await navigator.clipboard.readText();
       // 決まった形の記録か、長めの文章(話した内容のメモ)ならそのまま入れておく
       if (hasRecord(t) || (t || '').trim().length >= 150) text = t;
     } catch (e) { /* 読めなければ貼ってもらう */ }
-    setImporting({ text, token: Date.now() });
+    setImporting({ text, token: Date.now(), q: fixedQ && fixedQ.id ? fixedQ : null });
   }
 
   // 取りこむ記録(1件でも複数でも)を順に保存する
@@ -878,6 +929,7 @@ export function JibunView({ onToast, questionDraft, onQuestionDraftConsumed, key
           key=${sheet.q ? sheet.q.id : 'add-' + (sheet.token || '')}
           q=${sheet.q}
           talks=${data ? data.talks : []}
+          onPaste=${(q) => { setSheet(null); openImport(q); }}
           initialText=${sheet.text}
           initialTheme=${filter !== 'すべて' ? filter : '人生観'}
           onClose=${() => setSheet(null)}
@@ -891,6 +943,8 @@ export function JibunView({ onToast, questionDraft, onQuestionDraftConsumed, key
           key=${importing.token}
           initialText=${importing.text}
           insights=${data ? data.insights : []}
+          questions=${data ? data.questions : []}
+          fixedQuestion=${importing.q}
           onClose=${() => setImporting(null)}
           onImport=${doImport}
         />
