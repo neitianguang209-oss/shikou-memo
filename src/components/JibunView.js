@@ -1,5 +1,6 @@
 import htm from 'htm';
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   THEMES, themeColorKey, readKey, writeKey, readCache, writeCache,
   loadAll, addQuestion, updateQuestion, claudePrompt, claudeResumePrompt, chatgptPrompt, chatgptLongPrompt, shortDate,
@@ -347,8 +348,9 @@ function ImportSheet({ initialText, insights, onClose, onImport }) {
   }, []);
 
   const canOrganize = text.trim().length >= 30;
-  return html`
-    <div class="overlay overlay--top" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
+  // 画面のいちばん外側(body)に出す。「じぶん」画面の中に置くと、iPhoneでは下のタブの後ろに隠れることがある
+  return createPortal(html`
+    <div class="overlay overlay--full" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div class="modal-card jibun-sheet jibun-sheet--fixed-foot" role="dialog" aria-label="話した内容を取りこむ">
         <div class="modal-card__title">話した内容を取りこむ</div>
         ${!shown ? html`
@@ -382,6 +384,9 @@ function ImportSheet({ initialText, insights, onClose, onImport }) {
                 onToggle=${(n) => setMerges((m) => ({ ...m, [ri + ':' + n]: !mergeOf(ri, n) }))}
               />
             `)}
+            <button class="jibun-btn jibun-btn--wide" disabled=${busy} onClick=${save}>
+              ${busy ? '保存中…' : shown.length > 1 ? `ここまで確認したら ${shown.length}件を保存する` : 'ここまで確認したら保存する'}
+            </button>
           </div>
           <div class="jibun-sheet__foot jibun-row jibun-row--between">
             <button class="jibun-btn jibun-btn--plain" onClick=${() => { setText(''); setAiRecs(null); setMerges({}); }}>貼り直す</button>
@@ -392,7 +397,7 @@ function ImportSheet({ initialText, insights, onClose, onImport }) {
         `}
       </div>
     </div>
-  `;
+  `, document.body);
 }
 
 function Insights({ data, inFilter }) {
@@ -501,7 +506,7 @@ function QuestionSheet({ q, initialText, initialTheme, onClose, onSave, onAdd, o
     return p;
   }
 
-  return html`
+  return createPortal(html`
     <div class="overlay overlay--top" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div class="modal-card jibun-sheet" role="dialog" aria-label=${q ? '問い' : '問いを足す'}>
         <div class="modal-card__title">${q ? '問い' : '問いを足す'}</div>
@@ -542,7 +547,7 @@ function QuestionSheet({ q, initialText, initialTheme, onClose, onSave, onAdd, o
         `}
       </div>
     </div>
-  `;
+  `, document.body);
 }
 
 // 「じぶん」タブ: 問いを選んでClaudeと話し、気づきとその変化を振り返る(旧じぶんノート)

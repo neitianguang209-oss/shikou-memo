@@ -1728,7 +1728,7 @@ body:has(.overlay--top) .toast {
   font-size: 14px;
   line-height: 1.4;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-  z-index: 60;
+  z-index: 80;
   animation: toast-in 0.25s ease-out;
 }
 
@@ -2457,4 +2457,37 @@ body:has(.overlay--top) .toast {
   flex: 0 0 auto;
   padding-top: 10px;
   border-top: 1px solid var(--divider);
+}
+
+/* 取りこみカードは画面いっぱいの高さにする(下のタブにも、画面の高さの測りまちがいにも左右されない)。
+   キーボードが出ているときは、その分だけ上に縮む */
+.overlay--full {
+  z-index: 70;
+  flex-direction: column;
+  align-items: stretch;
+  padding: calc(8px + env(safe-area-inset-top)) 8px calc(8px + var(--kb, 0px) + env(safe-area-inset-bottom));
+}
+
+.overlay--full > .jibun-sheet--fixed-foot {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  width: 100%;
+  max-width: 464px;
+  margin: 0 auto;
+  overflow: hidden;
+  padding-bottom: 14px;
+  animation-name: sheet-down;
+}
+
+.jibun-sheet--fixed-foot .jibun-sheet__text--tall {
+  flex: 1 1 auto;
+  min-height: 160px;
+}
+
+.jibun-btn--wide {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 8px;
+  flex-shrink: 0;
 }
