@@ -2491,3 +2491,35 @@ body:has(.overlay--top) .toast {
   margin-top: 8px;
   flex-shrink: 0;
 }
+
+/* 問いのカード: これまで話したこと(タップで開く) */
+.jibun-pasttalks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jibun-pasttalk {
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+.jibun-pasttalk > summary {
+  cursor: pointer;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.jibun-pasttalk__head {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.jibun-pasttalk[open] > summary {
+  margin-bottom: 6px;
+}

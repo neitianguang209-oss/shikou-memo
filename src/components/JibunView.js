@@ -483,7 +483,29 @@ function Talks({ data, inFilter, filter, onImport }) {
 }
 
 // 問いを開いたとき・足すときのカード。文字を打つので上に出す
-function QuestionSheet({ q, initialText, initialTheme, onClose, onSave, onAdd, onChatgpt }) {
+// その問いで話した内容のまとめ(新しい順)。タップすると具体的な中身が開く
+function PastTalks({ talks }) {
+  if (!talks.length) return html`<p class="jibun-hint">まだ話した記録はありません。</p>`;
+  return html`
+    <div class="jibun-section">これまで話したこと(${talks.length}回)</div>
+    <div class="jibun-pasttalks">
+      ${talks.map((t) => html`
+        <details key=${t.id} class="jibun-pasttalk">
+          <summary>
+            <span class="jibun-meta">${shortDate(t.talked_on)}${t.status === '途中' ? ' ・ 途中まで' : ''}${t.source === 'ChatGPT' ? ' ・ ChatGPT' : ''}</span>
+            <span class="jibun-pasttalk__head">${t.headline || t.title || '(まとめなし)'}</span>
+          </summary>
+          ${t.summary && html`<div class="jibun-talk__summary">${t.summary}</div>`}
+          ${(t.quotes || []).map((x, i) => html`<blockquote key=${i} class="jibun-talk__quote">「${x}」</blockquote>`)}
+          ${t.new_material && html`<p class="jibun-hint">新しく出た話: ${t.new_material}</p>`}
+          ${t.next_question && html`<p class="jibun-hint">次に話したい: ${t.next_question}</p>`}
+        </details>
+      `)}
+    </div>
+  `;
+}
+
+function QuestionSheet({ q, talks, initialText, initialTheme, onClose, onSave, onAdd, onChatgpt }) {
   const [text, setText] = useState(q ? q.question : initialText || '');
   const [theme, setTheme] = useState(q ? q.theme : initialTheme || '人生観');
   const ref = useRef(null);
@@ -538,6 +560,7 @@ function QuestionSheet({ q, initialText, initialTheme, onClose, onSave, onAdd, o
               }}>保存</button>
             </span>
           </div>
+          <${PastTalks} talks=${(talks || []).filter((t) => t.question_id === q.id || (!t.question_id && t.title === q.question))} />
         ` : html`
           <div class="jibun-row jibun-row--between">
             <button class="jibun-btn jibun-btn--plain" onClick=${onClose}>閉じる</button>
@@ -854,6 +877,7 @@ export function JibunView({ onToast, questionDraft, onQuestionDraftConsumed, key
         <${QuestionSheet}
           key=${sheet.q ? sheet.q.id : 'add-' + (sheet.token || '')}
           q=${sheet.q}
+          talks=${data ? data.talks : []}
           initialText=${sheet.text}
           initialTheme=${filter !== 'すべて' ? filter : '人生観'}
           onClose=${() => setSheet(null)}
