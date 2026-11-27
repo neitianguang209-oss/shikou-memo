@@ -11,13 +11,19 @@ const ANON = 'sb_publishable_-sNQxpwsU7JxhPF9S2vn5A_-CCTqQZL';
 const KEY_STORE = 'jibun-note:key';
 const CACHE_STORE = 'jibun-note:cache';
 
-// 色はタグと同じパレットから選ぶ(画面にタグ色以外の色を増やさない)
+// テーマごとの色(家計簿のカテゴリ色と同じ調子)
 export const THEMES = [
-  { name: 'キャリア' },
-  { name: '恋愛・人間関係' },
-  { name: '人生観' },
-  { name: '日々の気持ち' },
+  { name: 'キャリア', color: '#1586cc' },
+  { name: '恋愛・人間関係', color: '#ff54a8' },
+  { name: '人生観', color: '#00a651' },
+  { name: '日々の気持ち', color: '#ff8700' },
 ];
+
+// 画面部品に渡す、テーマの色の指定(知らないテーマは指定なし=灰色)
+export function themeStyle(theme) {
+  const t = THEMES.find((x) => x.name === theme);
+  return t ? { '--theme': t.color } : null;
+}
 
 export function readKey() {
   try { return localStorage.getItem(KEY_STORE) || ''; } catch (e) { return ''; }

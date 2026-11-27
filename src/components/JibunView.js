@@ -2,7 +2,7 @@ import htm from 'htm';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  THEMES, readKey, writeKey, readCache, writeCache,
+  THEMES, themeStyle, readKey, writeKey, readCache, writeCache,
   loadAll, addQuestion, updateQuestion, claudePrompt, claudeResumePrompt, chatgptPrompt, chatgptLongPrompt, shortDate,
   parseRecord, hasRecord, importTalk, linkedRecord, similarity, readPending, writePending, structureText, markSimilar, CHATGPT_INSTRUCTIONS,
   profileOf, gapsOf, profileText, GAP_QUESTIONS, SHUKATSU_MODES, shukatsuPrompt,
@@ -19,9 +19,9 @@ const SECTIONS = [
 
 const KIND_ORDER = ['一言の自分', '価値観', '幸福観', '強み', '弱み', '動き方のクセ', '感情のクセ', 'やりたいこと', '避けたいこと', '企業選びの軸', '働き方の条件', 'キャリア仮説', '恋愛観', '人との関わり方', '問い'];
 
-// テーマは色分けせず、名前のラベルで見分ける(ホームのタグ色と意味がぶつからないように)
+// テーマは、色の付いた名前のラベルで見分ける
 function ThemeLabel({ theme }) {
-  return html`<span class="jibun-theme">${theme}</span>`;
+  return html`<span class="jibun-theme" style=${themeStyle(theme)}>${theme}</span>`;
 }
 
 function ThemeChips({ value, onChange, withAll }) {
@@ -33,9 +33,10 @@ function ThemeChips({ value, onChange, withAll }) {
           key=${n}
           type="button"
           class=${`jibun-chip${value === n ? ' is-active' : ''}`}
+          style=${themeStyle(n)}
           onClick=${() => onChange(n)}
         >
-          ${n}
+          ${n !== 'すべて' && html`<span class="jibun-dot"></span>`}${n}
         </button>
       `)}
     </div>
@@ -72,6 +73,7 @@ function QuestionItem({ q, onOpen, last }) {
   ].filter(Boolean).join(' ・ ');
   return html`
     <button class="jibun-q" onClick=${() => onOpen(q)}>
+      <span class="jibun-q__bar" style=${themeStyle(q.theme)}></span>
       <span class="jibun-q__main">
         <span class="jibun-q__text">${q.status === '決着' && html`<span class="jibun-q__done">✓ </span>`}${q.pinned && html`<span class="jibun-q__pin">★ </span>`}${q.question}</span>
         ${last && last.headline && html`<span class="jibun-q__answer">→ ${last.headline}</span>`}
@@ -135,8 +137,8 @@ function Questions({ data, inFilter, onOpen, onTalk, onChatgpt, onCopy, onUnpick
   return html`
     ${pending && html`<${PendingBanner} pending=${pending} onImport=${onImport} onDismiss=${onDismissPending} onLong=${onLong} />`}
     ${today ? html`
-      <div class="jibun-card jibun-today">
-        <div class="jibun-today__label">今日の問い ・ ${today.theme}</div>
+      <div class="jibun-card jibun-today" style=${themeStyle(today.theme)}>
+        <div class="jibun-today__label">今日の問い ・ <${ThemeLabel} theme=${today.theme} /></div>
         <div class="jibun-today__q">${today.question}</div>
         <div class="jibun-row">
           <button class="jibun-btn" onClick=${() => onTalk(today)}>Claudeと話す</button>
@@ -150,7 +152,7 @@ function Questions({ data, inFilter, onOpen, onTalk, onChatgpt, onCopy, onUnpick
     ${paused.length > 0 && html`
       <div class="jibun-section">途中の問い</div>
       ${paused.map((t) => html`
-        <div key=${t.id} class="jibun-card jibun-paused">
+        <div key=${t.id} class="jibun-card jibun-paused" style=${themeStyle(t.theme)}>
           <div class="jibun-meta"><${ThemeLabel} theme=${t.theme} />${shortDate(t.talked_on)} に途中まで</div>
           <div class="jibun-paused__q">${t.question || t.title}</div>
           ${t.resume_note && html`<p class="jibun-hint">続きは: ${t.resume_note}</p>`}
@@ -510,7 +512,7 @@ function Talks({ data, inFilter, filter, onImport }) {
     ${talks.length === 0
       ? html`<div class="jibun-empty">まだ記録がありません。</div>`
       : talks.map((t) => html`
-        <div key=${t.id} class="jibun-card jibun-talk">
+        <div key=${t.id} class="jibun-card jibun-talk" style=${themeStyle(t.theme)}>
           <div class="jibun-meta">
             <${ThemeLabel} theme=${t.theme} />${shortDate(t.talked_on)}
             ${t.source === 'ChatGPT' && ' ・ ChatGPTで話した'}

@@ -1,47 +1,47 @@
 :root {
   /* 家計簿・読書記録とそろえた、白黒グレーが土台の配色。色はアクセント(意味のある所だけ)とタグ色だけ */
   --bg-top: #FFFFFF;
-  --bg-notes: #F5F5F2;
+  --bg-notes: #F2F2F0;
   --bubble: #FFFFFF;
-  --text: #1C1D1B;
-  --text-sub: #70746D;
+  --text: #1F1F1F;
+  --text-sub: #716E69;
   --text-faint: #C3C5BF;
-  --divider: #E6E6E1;
+  --divider: #E3E2DF;
   --rail: #DCDDD7;
   --shadow-soft: 0 1px 2px rgba(23, 25, 23, 0.06);
   /* アクセント。設定の「アクセントの色」で --accent だけが入れ替わる */
-  --accent: #2C7A53;
+  --accent: #E87400;
   --on-accent: #FFFFFF;
   --accent-soft: color-mix(in srgb, var(--accent) 10%, #FFFFFF);
   /* 書体は家計簿・読書記録と同じ端末のゴシック */
   --sans: -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo', system-ui, sans-serif;
   /* 曜日(くすませた赤と青) */
-  --sun: #B5594E;
-  --sat: #46719C;
+  --sun: #DF4D22;
+  --sat: #1586CC;
 
   /* タグカラーパレット(15色、色相順)。既存8色(blue/green/lavender/apricot/pink/mint/sand/gray)は
      すでに使われているタグの色キーなので値を変更しない。新規7色を隙間の色相に追加。 */
-  --tag-coral-bg: #EFDBD4;    --tag-coral-fg: #884E3A;
-  --tag-apricot-bg: #F6E3CE;  --tag-apricot-fg: #9A7345;
-  --tag-sand-bg: #EFE7D5;     --tag-sand-fg: #8A7A4E;
-  --tag-olive-bg: #EAEFD4;    --tag-olive-fg: #7B883A;
-  --tag-green-bg: #DEE9DA;    --tag-green-fg: #5E7D57;
-  --tag-emerald-bg: #D4EFD9;  --tag-emerald-fg: #3A8847;
-  --tag-mint-bg: #D9EBE5;     --tag-mint-fg: #4F8175;
-  --tag-teal-bg: #D4EFEF;     --tag-teal-fg: #3A8888;
-  --tag-blue-bg: #DCEAF2;     --tag-blue-fg: #4E7C96;
-  --tag-sky-bg: #D4DDEF;      --tag-sky-fg: #3A5488;
-  --tag-lavender-bg: #E4DFEE; --tag-lavender-fg: #6F6490;
-  --tag-plum-bg: #EAD4EF;     --tag-plum-fg: #7B3A88;
-  --tag-rose-bg: #EFD4E4;     --tag-rose-fg: #883A67;
-  --tag-pink-bg: #F2DFE0;     --tag-pink-fg: #96666B;
-  --tag-gray-bg: #E6E4E1;     --tag-gray-fg: #77716A;
+  --tag-coral-bg: color-mix(in srgb, #ff4950 15%, #FFFFFF);    --tag-coral-fg: #ff4950;
+  --tag-apricot-bg: color-mix(in srgb, #ff8700 15%, #FFFFFF);  --tag-apricot-fg: #ff8700;
+  --tag-sand-bg: color-mix(in srgb, #a9673c 15%, #FFFFFF);     --tag-sand-fg: #a9673c;
+  --tag-olive-bg: color-mix(in srgb, #ffc400 15%, #FFFFFF);    --tag-olive-fg: #ffc400;
+  --tag-green-bg: color-mix(in srgb, #7cc21f 15%, #FFFFFF);    --tag-green-fg: #7cc21f;
+  --tag-emerald-bg: color-mix(in srgb, #00a651 15%, #FFFFFF);  --tag-emerald-fg: #00a651;
+  --tag-mint-bg: color-mix(in srgb, #3fd6ae 15%, #FFFFFF);     --tag-mint-fg: #3fd6ae;
+  --tag-teal-bg: color-mix(in srgb, #007f86 15%, #FFFFFF);     --tag-teal-fg: #007f86;
+  --tag-blue-bg: color-mix(in srgb, #09bdf0 15%, #FFFFFF);     --tag-blue-fg: #09bdf0;
+  --tag-sky-bg: color-mix(in srgb, #1638a7 15%, #FFFFFF);      --tag-sky-fg: #1638a7;
+  --tag-lavender-bg: color-mix(in srgb, #8f80ee 15%, #FFFFFF); --tag-lavender-fg: #8f80ee;
+  --tag-plum-bg: color-mix(in srgb, #8a3fc4 15%, #FFFFFF);     --tag-plum-fg: #8a3fc4;
+  --tag-rose-bg: color-mix(in srgb, #d62a6c 15%, #FFFFFF);     --tag-rose-fg: #d62a6c;
+  --tag-pink-bg: color-mix(in srgb, #ff54a8 15%, #FFFFFF);     --tag-pink-fg: #ff54a8;
+  --tag-gray-bg: color-mix(in srgb, #8e8e93 15%, #FFFFFF);     --tag-gray-fg: #8e8e93;
 }
 
-:root[data-accent="orange"] { --accent: #B85C0A; }
+:root[data-accent="forest"] { --accent: #26804F; }
 :root[data-accent="navy"] { --accent: #3456B8; }
-:root[data-accent="pink"] { --accent: #B84A76; }
-:root[data-accent="mono"] { --accent: #2B2C2A; }
+:root[data-accent="pink"] { --accent: #D35C8A; }
+:root[data-accent="mono"] { --accent: #2B2B2B; }
 
 * { box-sizing: border-box; }
 
@@ -161,15 +161,19 @@ input:focus-visible {
   font-weight: 600;
   line-height: 1.4;
   background: var(--tag-bg);
-  color: var(--tag-fg);
-  border: 1px solid transparent;
+  color: color-mix(in srgb, var(--tag-fg) 55%, #000000);
+  border: 1.5px solid transparent;
   white-space: nowrap;
 }
 
 .tag-chip--outline {
   background: transparent;
-  border: 1px solid var(--tag-fg);
-  color: var(--tag-fg);
+  border: 1.5px solid var(--divider);
+  color: var(--text-sub);
+}
+
+.input-sheet__tagbar .tag-chip:not(.tag-chip--outline):not(.tag-chip--new) {
+  border-color: var(--tag-fg);
 }
 
 .tag-chip--mini {
@@ -1097,12 +1101,12 @@ body:has(.overlay--top) .toast {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--tag-bg);
+  background: var(--tag-fg);
   border: 2px solid transparent;
 }
 
 .color-swatch.is-selected {
-  border-color: var(--tag-fg);
+  border-color: var(--text);
   box-shadow: inset 0 0 0 3px var(--bubble);
 }
 
@@ -1895,12 +1899,13 @@ body:has(.overlay--top) .toast {
   display: inline-block;
   margin-right: 6px;
   padding: 0 6px;
-  border: 1px solid var(--divider);
+  border: 1px solid color-mix(in srgb, var(--theme, #8E8E93) 55%, #FFFFFF);
+  background: color-mix(in srgb, var(--theme, #8E8E93) 14%, #FFFFFF);
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
   line-height: 1.6;
-  color: var(--text-sub);
+  color: color-mix(in srgb, var(--theme, #8E8E93) 55%, #000000);
   white-space: nowrap;
   vertical-align: 1px;
 }
@@ -1923,7 +1928,7 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-chips:not(.jibun-chips--wrap) .jibun-chip.is-active {
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--theme, var(--accent));
   color: var(--text);
   font-weight: 700;
 }
@@ -1951,7 +1956,7 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-today {
-  border-left: 3px solid var(--accent);
+  border-left: 4px solid var(--theme, var(--accent));
 }
 
 .jibun-today__label {
@@ -2661,4 +2666,45 @@ body:has(.overlay--top) .toast {
 
 .accent-swatch.is-active i {
   box-shadow: 0 0 0 2px var(--bubble), 0 0 0 4px var(--text);
+}
+
+/* テーマの色(キャリア=青・恋愛=ピンク・人生観=緑・気持ち=オレンジ) */
+.jibun-dot {
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--theme);
+}
+
+.jibun-chips--wrap .jibun-chip.is-active {
+  border: 1.5px solid var(--theme);
+  background: color-mix(in srgb, var(--theme) 15%, #FFFFFF);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.jibun-q__bar {
+  width: 4px;
+  flex: none;
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--theme);
+}
+
+.jibun-paused,
+.jibun-talk {
+  border-left: 4px solid var(--theme);
+}
+
+/* 選んでいないタグも、先頭の点で色が分かるように */
+.input-sheet__tagbar .tag-chip--outline::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--tag-fg);
 }

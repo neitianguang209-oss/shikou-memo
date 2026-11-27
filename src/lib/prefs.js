@@ -18,19 +18,19 @@ export function writeNoteStyle(style) {
 
 const ACCENT_KEY = 'shikou-memo:accent';
 export const ACCENTS = [
-  { key: 'forest', label: '緑', color: '#2C7A53' },
-  { key: 'orange', label: 'オレンジ', color: '#B85C0A' },
+  { key: 'orange', label: 'オレンジ', color: '#E87400' },
+  { key: 'forest', label: '緑', color: '#26804F' },
   { key: 'navy', label: '紺', color: '#3456B8' },
-  { key: 'pink', label: 'ピンク', color: '#B84A76' },
-  { key: 'mono', label: '黒', color: '#2B2C2A' },
+  { key: 'pink', label: 'ピンク', color: '#D35C8A' },
+  { key: 'mono', label: '黒', color: '#2B2B2B' },
 ];
 
 export function readAccent() {
   try {
     const v = localStorage.getItem(ACCENT_KEY);
-    return ACCENTS.some((a) => a.key === v) ? v : 'forest';
+    return ACCENTS.some((a) => a.key === v) ? v : 'orange';
   } catch (e) {
-    return 'forest';
+    return 'orange';
   }
 }
 
