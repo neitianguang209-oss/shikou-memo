@@ -29,7 +29,11 @@ export function readKey() {
   try { return localStorage.getItem(KEY_STORE) || ''; } catch (e) { return ''; }
 }
 
-export function writeKey(key) {
+export function writeKey(input) {
+  // 合言葉入りのリンク(…#jibun&k=…)を丸ごと貼っても通るように
+  const m = String(input || '').trim().match(/[#&]k=([^&\s]+)/);
+  let key = String(input || '').trim();
+  if (m) { try { key = decodeURIComponent(m[1]); } catch (e) { key = m[1]; } }
   try { localStorage.setItem(KEY_STORE, key); } catch (e) { /* 保存できなくても、この回は使える */ }
   // 日記の同期も同じ合言葉を使うので、入ったらすぐ同期し直せるように知らせる
   if (key) { try { window.dispatchEvent(new Event('shikou-key')); } catch (e) { /* 知らせは無くても2分おきに同期する */ } }

@@ -23,7 +23,7 @@ function SyncKeyCard({ wrong }) {
     <form class="sync-key" onSubmit=${submit}>
       <p>${wrong ? '合言葉がちがうようです。もう一度入れてください。' : 'クラウドの保存は合言葉で守るようになりました。家計簿・就活アプリと同じ合言葉を、この端末で1回だけ入れてください。それまで書いたメモは、この端末に残ります。'}</p>
       <div class="sync-key__row">
-        <input type="password" placeholder="合言葉" autocomplete="current-password" autocapitalize="off" value=${value} onInput=${(e) => setValue(e.target.value)} />
+        <input type="password" placeholder="合言葉（リンクを貼ってもOK）" autocomplete="current-password" autocapitalize="off" value=${value} onInput=${(e) => setValue(e.target.value)} />
         <button type="submit" disabled=${!value.trim()}>つなぐ</button>
       </div>
     </form>
