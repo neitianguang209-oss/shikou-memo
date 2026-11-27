@@ -5,9 +5,10 @@ import { formatDateHeading } from '../lib/format.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import { NoteItem, NOTE_STYLES } from './NoteItem.js';
 import { syncNow } from '../lib/sync.js';
+import { ACCENTS, readAccent, writeAccent } from '../lib/prefs.js';
 
 const html = htm.bind(React.createElement);
-const APP_VERSION = '1.9.4';
+const APP_VERSION = '2.0.0';
 const LAST_EXPORT_KEY = 'shikou-memo:lastExportAt';
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -88,6 +89,7 @@ export function SettingsView({ onManageTags, dataVersion, sync, noteStyle, onCha
   const [importMessage, setImportMessage] = useState('');
   const [importError, setImportError] = useState('');
   const fileInputRef = useRef(null);
+  const [accent, setAccent] = useState(readAccent);
 
   async function reloadInfo() {
     const notes = await db.getAllNotes();
@@ -178,6 +180,22 @@ export function SettingsView({ onManageTags, dataVersion, sync, noteStyle, onCha
           <${StylePreview} style=${noteStyle || 'bubble'} />
         </div>
         <div class="settings-hint">ホームのメモ一覧の見た目です。この端末だけで切り替わります。</div>
+
+        <div class="settings-card">
+          <div class="settings-card__title">アクセントの色</div>
+          <div class="accent-row" role="radiogroup" aria-label="アクセントの色">
+            ${ACCENTS.map((a) => html`
+              <button
+                key=${a.key}
+                role="radio"
+                aria-checked=${accent === a.key}
+                class=${`accent-swatch${accent === a.key ? ' is-active' : ''}`}
+                onClick=${() => { writeAccent(a.key); setAccent(a.key); }}
+              ><i style=${{ background: a.color }}></i><span>${a.label}</span></button>
+            `)}
+          </div>
+        </div>
+        <div class="settings-hint">＋ボタンや選んでいる日など、押す所と選んでいる所の色です。この端末だけで切り替わります。</div>
 
         <button class="settings-row" onClick=${onManageTags}>
           <span>タグを管理</span>

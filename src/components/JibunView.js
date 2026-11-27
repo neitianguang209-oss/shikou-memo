@@ -2,12 +2,11 @@ import htm from 'htm';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  THEMES, themeColorKey, readKey, writeKey, readCache, writeCache,
+  THEMES, readKey, writeKey, readCache, writeCache,
   loadAll, addQuestion, updateQuestion, claudePrompt, claudeResumePrompt, chatgptPrompt, chatgptLongPrompt, shortDate,
   parseRecord, hasRecord, importTalk, linkedRecord, similarity, readPending, writePending, structureText, markSimilar, CHATGPT_INSTRUCTIONS,
   profileOf, gapsOf, profileText, GAP_QUESTIONS, SHUKATSU_MODES, shukatsuPrompt,
 } from '../lib/jibun.js';
-import { tagColorVars } from '../lib/tagColors.js';
 
 const html = htm.bind(React.createElement);
 
@@ -20,8 +19,9 @@ const SECTIONS = [
 
 const KIND_ORDER = ['一言の自分', '価値観', '幸福観', '強み', '弱み', '動き方のクセ', '感情のクセ', 'やりたいこと', '避けたいこと', '企業選びの軸', '働き方の条件', 'キャリア仮説', '恋愛観', '人との関わり方', '問い'];
 
-function ThemeDot({ theme }) {
-  return html`<span class="jibun-dot" style=${tagColorVars(themeColorKey(theme))}></span>`;
+// テーマは色分けせず、名前のラベルで見分ける(ホームのタグ色と意味がぶつからないように)
+function ThemeLabel({ theme }) {
+  return html`<span class="jibun-theme">${theme}</span>`;
 }
 
 function ThemeChips({ value, onChange, withAll }) {
@@ -35,7 +35,7 @@ function ThemeChips({ value, onChange, withAll }) {
           class=${`jibun-chip${value === n ? ' is-active' : ''}`}
           onClick=${() => onChange(n)}
         >
-          ${n !== 'すべて' && html`<${ThemeDot} theme=${n} />`}${n}
+          ${n}
         </button>
       `)}
     </div>
@@ -66,18 +66,16 @@ function KeyScreen({ message, onSubmit }) {
 
 function QuestionItem({ q, onOpen, last }) {
   const meta = [
-    q.theme,
     q.times_talked ? `${q.times_talked}回話した` : 'まだ話していない',
     q.last_talked ? `最後 ${shortDate(q.last_talked)}` : '',
     q.source === '前のトークの宿題' ? '前のトークの宿題' : q.source === 'トーク' || q.source === 'ChatGPT' ? '話から生まれた問い' : '',
   ].filter(Boolean).join(' ・ ');
   return html`
     <button class="jibun-q" onClick=${() => onOpen(q)}>
-      <span class="jibun-q__bar" style=${tagColorVars(themeColorKey(q.theme))}></span>
       <span class="jibun-q__main">
         <span class="jibun-q__text">${q.status === '決着' && html`<span class="jibun-q__done">✓ </span>`}${q.pinned && html`<span class="jibun-q__pin">★ </span>`}${q.question}</span>
         ${last && last.headline && html`<span class="jibun-q__answer">→ ${last.headline}</span>`}
-        <span class="jibun-meta">${meta}</span>
+        <span class="jibun-meta"><${ThemeLabel} theme=${q.theme} />${meta}</span>
       </span>
     </button>
   `;
@@ -138,7 +136,7 @@ function Questions({ data, inFilter, onOpen, onTalk, onChatgpt, onCopy, onUnpick
     ${pending && html`<${PendingBanner} pending=${pending} onImport=${onImport} onDismiss=${onDismissPending} onLong=${onLong} />`}
     ${today ? html`
       <div class="jibun-card jibun-today">
-        <div class="jibun-today__label"><${ThemeDot} theme=${today.theme} />今日の問い ・ ${today.theme}</div>
+        <div class="jibun-today__label">今日の問い ・ ${today.theme}</div>
         <div class="jibun-today__q">${today.question}</div>
         <div class="jibun-row">
           <button class="jibun-btn" onClick=${() => onTalk(today)}>Claudeと話す</button>
@@ -153,7 +151,7 @@ function Questions({ data, inFilter, onOpen, onTalk, onChatgpt, onCopy, onUnpick
       <div class="jibun-section">途中の問い</div>
       ${paused.map((t) => html`
         <div key=${t.id} class="jibun-card jibun-paused">
-          <div class="jibun-meta"><${ThemeDot} theme=${t.theme} />${shortDate(t.talked_on)} に途中まで ・ ${t.theme}</div>
+          <div class="jibun-meta"><${ThemeLabel} theme=${t.theme} />${shortDate(t.talked_on)} に途中まで</div>
           <div class="jibun-paused__q">${t.question || t.title}</div>
           ${t.resume_note && html`<p class="jibun-hint">続きは: ${t.resume_note}</p>`}
           <div class="jibun-row">
@@ -234,7 +232,7 @@ function Profile({ data, filter, onAddGap, onShukatsu, onCopy }) {
         <div key=${g.title + '-c'} class=${`jibun-card${g.kinds[0] === '一言の自分' ? ' jibun-profile-lead' : ''}`}>
           ${g.items.slice(0, 6).map((i) => html`
             <div key=${i.id} class="jibun-ins">
-              <div class="jibun-ins__s"><${ThemeDot} theme=${i.theme} />${i.statement}</div>
+              <div class="jibun-ins__s"><${ThemeLabel} theme=${i.theme} />${i.statement}</div>
               <div class="jibun-meta"><span class="jibun-conf">${'●'.repeat(i.confidence || 1)}${'○'.repeat(Math.max(0, 3 - (i.confidence || 1)))}</span>${i.source === 'ChatGPT' ? ' ・ ChatGPTで' : ''}</div>
             </div>
           `)}
@@ -250,7 +248,7 @@ function RecordPreview({ rec, insights, merges, onToggle }) {
   const opLabel = { new: '新しい', same: '同じ', changed: '変わった', withdrawn: '取り下げ' };
   return html`
     <div class="jibun-preview">
-      <div class="jibun-meta"><${ThemeDot} theme=${rec.theme || '人生観'} />${rec.theme || 'テーマなし'} ・ ${rec.talked_on ? shortDate(rec.talked_on) : '今日'}${rec.status === '途中' ? ' ・ 途中まで' : rec.answered ? ' ・ 答えが出た' : ''}${rec.question_id ? '' : ' ・ 新しい問い'}</div>
+      <div class="jibun-meta"><${ThemeLabel} theme=${rec.theme || 'テーマなし'} />${rec.talked_on ? shortDate(rec.talked_on) : '今日'}${rec.status === '途中' ? ' ・ 途中まで' : rec.answered ? ' ・ 答えが出た' : ''}${rec.question_id ? '' : ' ・ 新しい問い'}</div>
       <div class="jibun-paused__q">${rec.question || '(問いなし)'}</div>
       ${rec.headline && html`<div class="jibun-talk__headline">${rec.headline}</div>`}
       ${rec.summary && html`<div class="jibun-talk__summary jibun-preview__summary">${rec.summary}</div>`}
@@ -303,7 +301,7 @@ function QuestionLinks({ rec, questions, primaryId, picked, onToggle }) {
             type="button"
             class=${`jibun-link${picked.has(q.id) ? ' is-active' : ''}`}
             onClick=${() => onToggle(q.id)}
-          ><${ThemeDot} theme=${q.theme} />${q.question}</button>
+          ><${ThemeLabel} theme=${q.theme} />${q.question}</button>
         `)}
       </div>
     </details>
@@ -395,7 +393,7 @@ function ImportSheet({ initialText, insights, questions, fixedQuestion, onClose,
     <div class="overlay overlay--full" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div class="modal-card jibun-sheet jibun-sheet--fixed-foot" role="dialog" aria-label="話した内容を取りこむ">
         <div class="modal-card__title">${fixedQuestion ? 'この問いの話を取りこむ' : '話した内容を取りこむ'}</div>
-        ${fixedQuestion && html`<div class="jibun-fixedq"><${ThemeDot} theme=${fixedQuestion.theme} />${fixedQuestion.question}</div>`}
+        ${fixedQuestion && html`<div class="jibun-fixedq"><${ThemeLabel} theme=${fixedQuestion.theme} />${fixedQuestion.question}</div>`}
         ${!shown ? html`
           <div class="jibun-sheet__body">
             <textarea
@@ -485,7 +483,7 @@ function Insights({ data, inFilter }) {
           const conf = i.confidence || 1;
           return html`
             <div key=${i.id} class="jibun-ins">
-              <div class="jibun-ins__s"><${ThemeDot} theme=${i.theme} />${i.statement}</div>
+              <div class="jibun-ins__s"><${ThemeLabel} theme=${i.theme} />${i.statement}</div>
               <div class="jibun-meta">
                 <span class="jibun-conf">${'●'.repeat(conf)}${'○'.repeat(Math.max(0, 3 - conf))}</span>
                 ${i.first_seen ? ` ・ ${i.first_seen.slice(0, 7).replace('-', '年')}月から` : ''}
@@ -514,7 +512,7 @@ function Talks({ data, inFilter, filter, onImport }) {
       : talks.map((t) => html`
         <div key=${t.id} class="jibun-card jibun-talk">
           <div class="jibun-meta">
-            <${ThemeDot} theme=${t.theme} />${shortDate(t.talked_on)} ・ ${t.theme}
+            <${ThemeLabel} theme=${t.theme} />${shortDate(t.talked_on)}
             ${t.source === 'ChatGPT' && ' ・ ChatGPTで話した'}
             ${t.status === '途中' && html`<span class="jibun-badge">途中</span>`}
           </div>

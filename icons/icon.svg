@@ -1,48 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- 思考メモ アイコンの元絵: やわらかい杏色の地に、考えごとの吹き出しと、その中のメモの行
-       PNG は icons/render-icons.ps1 で作る(Edge で描いて縮小) -->
-  <defs>
-    <radialGradient id="bg" cx="0.3" cy="0.2" r="1.1">
-      <stop offset="0" stop-color="#f3bf98" />
-      <stop offset="1" stop-color="#d98a66" />
-    </radialGradient>
-    <linearGradient id="paper" x1="0" y1="180" x2="0" y2="880" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#fffaf2" />
-      <stop offset="1" stop-color="#f3e9da" />
-    </linearGradient>
-    <g id="bubble">
-      <circle cx="520" cy="254" r="118" />
-      <circle cx="688" cy="300" r="118" />
-      <circle cx="778" cy="416" r="118" />
-      <circle cx="747" cy="548" r="118" />
-      <circle cx="610" cy="634" r="118" />
-      <circle cx="430" cy="634" r="118" />
-      <circle cx="293" cy="548" r="118" />
-      <circle cx="262" cy="416" r="118" />
-      <circle cx="352" cy="300" r="118" />
-      <ellipse cx="520" cy="450" rx="262" ry="196" />
-      <circle cx="262" cy="752" r="46" />
-      <circle cx="176" cy="846" r="26" />
+  <!-- 思考メモのアイコン(2026-11-27 本人が用意した絵): 考えごとをする、ポンチョのかえるとハテナの吹き出し。
+       地は読書記録・家計簿と同じ生成り色の四角(角はスマホが丸める)。PNG は icons/render-icons.ps1 で作る -->
+  <rect width="1024" height="1024" fill="#F6F1E5"/>
+  <g transform="translate(512 512) scale(3.2) translate(-171 -176)">
+    <!-- 顔 -->
+    <g fill="#8FCB8E">
+      <circle cx="119" cy="141" r="27"/>
+      <circle cx="194" cy="133" r="27"/>
+      <ellipse cx="162" cy="184" rx="70.5" ry="52" transform="rotate(-6 162 184)"/>
     </g>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="24" />
-    </filter>
-    <filter id="grain" x="0" y="0" width="100%" height="100%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="11" />
-      <feColorMatrix type="saturate" values="0" />
-    </filter>
-  </defs>
-
-  <rect width="1024" height="1024" fill="url(#bg)" />
-  <use href="#bubble" fill="#8a4430" opacity="0.35" filter="url(#shadow)" transform="translate(16 30)" />
-  <use href="#bubble" fill="url(#paper)" />
-
-  <!-- メモの行 -->
-  <g stroke="#86655c" stroke-width="28" stroke-linecap="round">
-    <line x1="380" y1="378" x2="660" y2="378" />
-    <line x1="380" y1="456" x2="660" y2="456" />
-    <line x1="380" y1="534" x2="530" y2="534" />
+    <circle cx="118" cy="141" r="12.5" fill="#fff"/>
+    <circle cx="193" cy="132" r="12.5" fill="#fff"/>
+    <circle cx="121.5" cy="138" r="6.6" fill="#1F2D20"/>
+    <circle cx="196.5" cy="129" r="6.6" fill="#1F2D20"/>
+    <circle cx="112" cy="193" r="9.5" fill="#DCAE98"/>
+    <circle cx="211" cy="181" r="9.5" fill="#DCAE98"/>
+    <path d="M141 189.5q23 15 42-5" fill="none" stroke="#1F2D20" stroke-width="5.4" stroke-linecap="round"/>
+    <!-- ポンチョ -->
+    <path fill="#AFCDE3" d="M123 219.5Q162 237 202 212.5L255 291.5Q164 315 72 291.5Z"/>
+    <path d="M128 224q34 18 70-3" fill="none" stroke="#7FA0B8" stroke-width="6.4" stroke-linecap="round"/>
+    <path d="M91 267.5l10 2M109 271l10 1.5M202 273l11-1.2M220 269.8l11-1.8" fill="none" stroke="#F8F2DC" stroke-width="6.4"/>
+    <!-- あごの手と、すその手 -->
+    <circle cx="171.5" cy="216" r="14.2" fill="#5F8F66"/>
+    <circle cx="172.3" cy="217.2" r="12.6" fill="#8FCB8E"/>
+    <circle cx="101" cy="291.5" r="13.6" fill="#5F8F66"/>
+    <circle cx="101.6" cy="292.8" r="12" fill="#8FCB8E"/>
+    <!-- 考えごとの吹き出し -->
+    <g fill="#fff" stroke="#2A2E2B" stroke-width="2.3" stroke-linejoin="round">
+      <path d="M223 55C221 45 233 40 240 45C245 38 258 39 261 48C270 47 277 57 270 64C276 72 267 83 257 79C253 87 240 88 235 81C226 85 214 79 217 70C208 66 212 54 223 55Z"/>
+      <circle cx="231" cy="93.5" r="5.8"/>
+      <circle cx="221.5" cy="103.5" r="3.6"/>
+      <circle cx="213.5" cy="109.5" r="2.2"/>
+    </g>
+    <path d="M236.5 57.5c0-9 14-9.5 14-.8c0 6-7 5.500-7 12" fill="none" stroke="#23282A" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="243.500" cy="76" r="3.300" fill="#23282A"/>
   </g>
-
-  <rect width="1024" height="1024" filter="url(#grain)" opacity="0.05" style="mix-blend-mode:overlay" />
 </svg>

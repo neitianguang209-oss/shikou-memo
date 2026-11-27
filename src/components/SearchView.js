@@ -5,6 +5,7 @@ import { formatDateHeadingWithYear, formatTime } from '../lib/format.js';
 import { tagColorVars } from '../lib/tagColors.js';
 import { SourceMark, isFromReading } from './NoteItem.js';
 import { LinkedText, NoteLink, findUrls, pressable } from './LinkedText.js';
+import { TagsView } from './TagsView.js';
 
 const html = htm.bind(React.createElement);
 const SNIPPET_LEAD = 18;   // 一致した所がこれより後ろにあるときは、手前を「…」で省いて見せる
@@ -89,7 +90,10 @@ function Snippet({ body, query }) {
   return html`${cut > 0 ? '…' : ''}${parts}`;
 }
 
-export function SearchView({ onJumpToHome, dataVersion }) {
+// 「探す」タブ。検索欄に何も入れていないときはタグの一覧、打つと検索結果を出す
+export function SearchView({ onJumpToHome, startEditToken, onStartEditConsumed, dataVersion }) {
+  // 設定の「タグを管理」から来たときは、検索語を残さずタグの一覧を出す
+  if (startEditToken) savedQuery = '';
   const [query, setQuery] = useState(savedQuery);
   const [results, setResults] = useState([]);
   const [tags, setTags] = useState([]);
@@ -131,8 +135,7 @@ export function SearchView({ onJumpToHome, dataVersion }) {
 
   const trimmed = query.trim();
 
-  return html`
-    <div class="search-view">
+  const searchHeader = html`
       <div class="view-header">
         <div class="search-box">
           <svg class="search-box__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
@@ -158,8 +161,9 @@ export function SearchView({ onJumpToHome, dataVersion }) {
           `}
         </div>
       </div>
+  `;
+  const searchResults = trimmed ? html`
       <div class="search-results">
-        ${!trimmed && html`<div class="view-placeholder">全角・半角や大文字・小文字の違いは気にせず探せます</div>`}
         ${trimmed && results.length === 0 && html`<div class="view-placeholder">「${trimmed}」を含むメモはありません</div>`}
         ${trimmed && results.length > 0 && html`<div class="search-count">${results.length}件</div>`}
         ${results.map((n) => {
@@ -176,6 +180,14 @@ export function SearchView({ onJumpToHome, dataVersion }) {
           `;
         })}
       </div>
-    </div>
-  `;
+  ` : null;
+
+  return html`<${TagsView}
+    header=${searchHeader}
+    results=${searchResults}
+    onJumpToHome=${onJumpToHome}
+    startEditToken=${startEditToken}
+    onStartEditConsumed=${onStartEditConsumed}
+    dataVersion=${dataVersion}
+  />`;
 }

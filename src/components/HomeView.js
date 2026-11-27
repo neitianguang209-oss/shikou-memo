@@ -84,6 +84,12 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
     setDotsLoaded(true);
   }
 
+  // 日付 → メモの件数。カレンダーの量のバーに使う
+  const dayCounts = useMemo(
+    () => new Map(Array.from(dayTagIds, ([key, ids]) => [key, ids.length])),
+    [dayTagIds]
+  );
+
   // 日付 → 点の色(重ならないように最大3つ)
   const dayDots = useMemo(() => {
     const colorOf = new Map(tags.map((t) => [t.id, t.colorKey]));
@@ -431,6 +437,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
             selectedDateKey=${selectedDateKey}
             todayKey=${today}
             dayDots=${dayDots}
+            dayCounts=${dayCounts}
             expanded=${false}
             onSelectDate=${selectDate}
             onChangeMonth=${changeMonth}
@@ -458,6 +465,7 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
           selectedDateKey=${selectedDateKey}
           todayKey=${today}
           dayDots=${dayDots}
+          dayCounts=${dayCounts}
           expanded=${calendarExpanded}
           onSelectDate=${selectDate}
           onChangeMonth=${changeMonth}

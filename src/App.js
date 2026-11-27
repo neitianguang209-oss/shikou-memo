@@ -2,7 +2,6 @@ import htm from 'htm';
 import React, { useEffect, useRef, useState } from 'react';
 import { BottomNav } from './components/BottomNav.js';
 import { HomeView } from './components/HomeView.js';
-import { TagsView } from './components/TagsView.js';
 import { SearchView } from './components/SearchView.js';
 import { SettingsView } from './components/SettingsView.js';
 import { JibunView } from './components/JibunView.js';
@@ -86,7 +85,7 @@ export function App() {
 
   function manageTags() {
     setTagsOpenToken(Date.now());
-    setView('tags');
+    setView('explore');
   }
 
   return html`
@@ -109,8 +108,7 @@ export function App() {
           questionDraft=${questionDraft}
           onQuestionDraftConsumed=${() => setQuestionDraft(null)}
         />`}
-        ${view === 'tags' && html`<${TagsView} onJumpToHome=${jumpToHome} startEditToken=${tagsOpenToken} onStartEditConsumed=${() => setTagsOpenToken(null)} dataVersion=${dataVersion} />`}
-        ${view === 'search' && html`<${SearchView} onJumpToHome=${jumpToHome} dataVersion=${dataVersion} />`}
+        ${view === 'explore' && html`<${SearchView} onJumpToHome=${jumpToHome} startEditToken=${tagsOpenToken} onStartEditConsumed=${() => setTagsOpenToken(null)} dataVersion=${dataVersion} />`}
         ${view === 'settings' && html`<${SettingsView}
           onManageTags=${manageTags}
           dataVersion=${dataVersion}

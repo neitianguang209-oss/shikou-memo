@@ -1,24 +1,24 @@
 :root {
+  /* 家計簿・読書記録とそろえた、白黒グレーが土台の配色。色はアクセント(意味のある所だけ)とタグ色だけ */
   --bg-top: #FFFFFF;
-  /* メモの地はうすい杏色寄りの生成り(やわらかい地色) */
-  --bg-notes: #F6F1E9;
+  --bg-notes: #F5F5F2;
   --bubble: #FFFFFF;
-  --text: #1C1C1E;
-  --text-sub: #8C867E;
-  --text-faint: #CDC5B8;
-  --accent: #F5D6A0;
-  --accent-soft: #FBEBCF;
-  --accent-deep: #E2B260;
-  --accent-strong: #5A4A2A;
-  --divider: #ECE5DA;
-  --rail: #E4DACB;
-  --shadow-soft: 0 1px 3px rgba(90, 74, 42, 0.07);
+  --text: #1C1D1B;
+  --text-sub: #70746D;
+  --text-faint: #C3C5BF;
+  --divider: #E6E6E1;
+  --rail: #DCDDD7;
+  --shadow-soft: 0 1px 2px rgba(23, 25, 23, 0.06);
+  /* アクセント。設定の「アクセントの色」で --accent だけが入れ替わる */
+  --accent: #2C7A53;
+  --on-accent: #FFFFFF;
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, #FFFFFF);
+  /* 本文と見出しは明朝、タグ・日付・ボタンなどの補助はゴシック */
+  --serif: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "BIZ UDMincho", "Noto Serif JP", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", sans-serif;
   /* 曜日(くすませた赤と青) */
-  --sun: #C0675B;
-  --sat: #4F7CAE;
-  /* 「読書メモから」の印(読書記録アプリの深緑に合わせる) */
-  --src-bg: #E2ECE7;
-  --src-fg: #2F5A4F;
+  --sun: #B5594E;
+  --sat: #46719C;
 
   /* タグカラーパレット(15色、色相順)。既存8色(blue/green/lavender/apricot/pink/mint/sand/gray)は
      すでに使われているタグの色キーなので値を変更しない。新規7色を隙間の色相に追加。 */
@@ -39,6 +39,11 @@
   --tag-gray-bg: #E6E4E1;     --tag-gray-fg: #77716A;
 }
 
+:root[data-accent="orange"] { --accent: #B85C0A; }
+:root[data-accent="navy"] { --accent: #3456B8; }
+:root[data-accent="pink"] { --accent: #B84A76; }
+:root[data-accent="mono"] { --accent: #2B2C2A; }
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -47,7 +52,7 @@ html, body {
   height: 100%;
   background: var(--bg-notes);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+  font-family: var(--sans);
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   overscroll-behavior: none;
@@ -80,7 +85,7 @@ input, textarea {
 
 /* キーボードで操作したときだけ、いまどこにいるかを示す */
 :focus-visible {
-  outline: 2px solid var(--accent-strong);
+  outline: 2px solid var(--text);
   outline-offset: 2px;
 }
 textarea:focus-visible,
@@ -128,7 +133,8 @@ input:focus-visible {
 }
 
 .bottom-nav__item.is-active {
-  color: var(--accent-strong);
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .bottom-nav__icon {
@@ -138,10 +144,6 @@ input:focus-visible {
   width: 52px;
   height: 30px;
   border-radius: 999px;
-}
-
-.bottom-nav__item.is-active .bottom-nav__icon {
-  background: var(--accent);
 }
 
 .bottom-nav__item svg {
@@ -214,6 +216,7 @@ input:focus-visible {
 }
 
 .home__date-heading {
+  font-family: var(--serif);
   font-size: 22px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -225,8 +228,8 @@ input:focus-visible {
 .home__today-btn {
   padding: 4px 12px;
   border-radius: 999px;
-  border: 1px solid var(--accent);
-  color: var(--accent-strong);
+  border: 1px solid var(--divider);
+  color: var(--text);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -250,7 +253,7 @@ input:focus-visible {
 
 .calendar__weekdays {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   margin-bottom: 2px;
 }
 
@@ -263,7 +266,7 @@ input:focus-visible {
 
 .calendar__grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   touch-action: pan-y;
 }
 
@@ -289,8 +292,9 @@ input:focus-visible {
 }
 
 .calendar__cell {
-  aspect-ratio: 1 / 1;
-  max-height: 54px;
+  height: 52px;
+  min-width: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -299,8 +303,8 @@ input:focus-visible {
 }
 
 .calendar__day-circle {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -318,13 +322,13 @@ input:focus-visible {
 
 /* 今日は濃いめの杏色の輪、選んでいる日は杏色で塗る */
 .calendar__day-circle.is-today {
-  border: 2px solid var(--accent-deep);
+  border: 2px solid var(--accent);
   font-weight: 700;
 }
 
 .calendar__day-circle.is-selected {
   background: var(--accent);
-  color: var(--accent-strong);
+  color: var(--on-accent);
   font-weight: 700;
 }
 
@@ -347,6 +351,13 @@ input:focus-visible {
   background: var(--tag-fg);
 }
 
+/* その日のメモの量(3件以上の日だけ。長いほど多い) */
+.calendar__amount {
+  height: 2px;
+  border-radius: 2px;
+  background: var(--text-sub);
+}
+
 /* ---- 上に残る週の帯 ---- */
 .home__mini {
   position: sticky;
@@ -363,7 +374,7 @@ input:focus-visible {
   background: var(--bg-top);
   padding: 8px 20px 4px;
   border-bottom: 1px solid var(--divider);
-  box-shadow: 0 4px 14px rgba(90, 74, 42, 0.08);
+  box-shadow: 0 4px 14px rgba(23, 25, 23, 0.08);
   transform: translateY(-110%);
   visibility: hidden;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.22s;
@@ -383,6 +394,7 @@ input:focus-visible {
 }
 
 .home__mini-date {
+  font-family: var(--serif);
   font-size: 17px;
   font-weight: 600;
   color: var(--text);
@@ -394,12 +406,12 @@ input:focus-visible {
 }
 
 .home__mini-bar .calendar__cell {
-  max-height: 48px;
+  height: 48px;
 }
 
 .home__mini-bar .calendar__day-circle {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   font-size: 16px;
 }
 
@@ -425,7 +437,9 @@ input:focus-visible {
 
 /* ---- メモ1件(3つの見せ方で共通) ---- */
 .note-text {
-  font-size: 16px;
+  font-family: var(--serif);
+  font-size: 16.5px;
+  letter-spacing: 0.02em;
   line-height: 1.7;
   color: var(--text);
   white-space: pre-wrap;
@@ -439,6 +453,18 @@ input:focus-visible {
   -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* 切れているメモは下に向かって薄くして「続きがある」と分かるように */
+.note-text.is-clamped.is-overflowing {
+  -webkit-mask-image: linear-gradient(to bottom, #000 40%, rgba(0, 0, 0, 0.1) 100%);
+  mask-image: linear-gradient(to bottom, #000 40%, rgba(0, 0, 0, 0.1) 100%);
+}
+
+/* 長文は行間を少し広く */
+.note-text.is-long,
+.diary-row .note-text.is-long {
+  line-height: 2;
 }
 
 /* 長押しはこのアプリのメニューにするので、iPhone の文字選択は出さない(コピーはメニューから) */
@@ -482,8 +508,9 @@ input:focus-visible {
   gap: 3px;
   padding: 1px 8px 1px 6px;
   border-radius: 999px;
-  background: var(--src-bg);
-  color: var(--src-fg);
+  border: 1px solid var(--divider);
+  background: var(--bubble);
+  color: var(--text-sub);
   font-size: 11px;
   font-weight: 500;
   line-height: 1.6;
@@ -552,7 +579,7 @@ input:focus-visible {
 
 .note-bubble.is-highlighted,
 .tl-card.is-highlighted {
-  box-shadow: 0 0 0 2px var(--accent-deep), var(--shadow-soft);
+  box-shadow: 0 0 0 2px var(--accent), var(--shadow-soft);
 }
 
 /* タイムライン */
@@ -682,7 +709,7 @@ input:focus-visible {
 }
 
 .diary-row .note-text {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif;
+  font-family: var(--serif);
   font-size: 16.5px;
   line-height: 1.85;
   letter-spacing: 0.02em;
@@ -704,7 +731,7 @@ input:focus-visible {
   height: 60px;
   border-radius: 50%;
   background: var(--accent);
-  color: var(--accent-strong);
+  color: var(--on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -826,11 +853,11 @@ input:focus-visible {
   padding: 0 16px;
   border-radius: 999px;
   background: var(--accent);
-  color: var(--accent-strong);
+  color: var(--on-accent);
   font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(90, 74, 42, 0.15);
+  box-shadow: var(--shadow-soft);
   transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -914,7 +941,7 @@ input:focus-visible {
   padding: 6px 6px 6px 12px;
   border-radius: 10px;
   background: var(--accent-soft);
-  color: var(--accent-strong);
+  color: var(--text);
   font-size: 13px;
 }
 
@@ -922,7 +949,7 @@ input:focus-visible {
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 13px;
-  color: var(--accent-strong);
+  color: var(--text);
 }
 
 .input-sheet__textarea {
@@ -939,7 +966,8 @@ input:focus-visible {
   line-height: 1.6;
   color: var(--text);
   background: transparent;
-  font-family: inherit;
+  font-family: var(--serif);
+  letter-spacing: 0.02em;
 }
 
 .input-sheet__textarea::placeholder {
@@ -979,7 +1007,7 @@ input:focus-visible {
 
 .input-sheet__hash.is-open {
   background: var(--accent-soft);
-  color: var(--accent-strong);
+  color: var(--text);
 }
 
 .tag-chip--new {
@@ -1103,7 +1131,7 @@ body:has(.overlay--top) .toast {
 
 .modal-card__btn--primary {
   background: var(--accent);
-  color: var(--accent-strong);
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -1183,6 +1211,7 @@ body:has(.overlay--top) .toast {
 }
 
 .view-header__title {
+  font-family: var(--serif);
   font-size: 20px;
   font-weight: 600;
   color: var(--text);
@@ -1212,7 +1241,7 @@ body:has(.overlay--top) .toast {
 .view-header__action {
   min-height: 36px;
   font-size: 15px;
-  color: var(--accent-strong);
+  color: var(--text);
   padding: 6px 10px;
   border-radius: 999px;
 }
@@ -1224,8 +1253,8 @@ body:has(.overlay--top) .toast {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent);
-  color: var(--accent-strong);
+  border: 1px solid var(--divider);
+  color: var(--text);
 }
 
 .view-header__icon svg {
@@ -1414,6 +1443,7 @@ body:has(.overlay--top) .toast {
 }
 
 .tag-detail__note-body {
+  font-family: var(--serif);
   flex: 1;
   min-width: 0;
   font-size: 15px;
@@ -1520,6 +1550,7 @@ body:has(.overlay--top) .toast {
 }
 
 .search-result__body {
+  font-family: var(--serif);
   font-size: 15px;
   color: var(--text);
   line-height: 1.6;
@@ -1533,7 +1564,7 @@ body:has(.overlay--top) .toast {
 
 .search-highlight {
   color: var(--text);
-  background: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, #FFFFFF);
   border-radius: 3px;
   padding: 0 1px;
 }
@@ -1601,7 +1632,7 @@ body:has(.overlay--top) .toast {
 }
 
 .settings-status__dot.is-ok {
-  background: var(--accent-strong);
+  background: var(--text);
 }
 
 .settings-about {
@@ -1631,7 +1662,7 @@ body:has(.overlay--top) .toast {
   border: none;
   border-radius: 14px;
   background: var(--accent);
-  color: var(--accent-strong);
+  color: var(--on-accent);
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
@@ -1647,7 +1678,7 @@ body:has(.overlay--top) .toast {
   padding: 0 6px;
   border-radius: 999px;
   background: var(--bubble);
-  color: var(--accent-strong);
+  color: var(--text);
   font-size: 13px;
   font-weight: 600;
 }
@@ -1683,7 +1714,7 @@ body:has(.overlay--top) .toast {
   padding: 6px 12px;
   border-radius: 999px;
   background: var(--accent);
-  color: var(--accent-strong);
+  color: var(--on-accent);
   font-size: 13px;
 }
 
@@ -1702,7 +1733,7 @@ body:has(.overlay--top) .toast {
 
 .settings-row__link {
   font-size: 14px;
-  color: var(--accent-strong);
+  color: var(--text);
   padding: 4px 0 4px 12px;
 }
 
@@ -1779,7 +1810,7 @@ body:has(.overlay--top) .toast {
   background: var(--bubble);
   color: var(--text);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(90, 74, 42, 0.12);
+  box-shadow: 0 1px 3px rgba(23, 25, 23, 0.12);
 }
 
 .style-preview {
@@ -1806,7 +1837,7 @@ body:has(.overlay--top) .toast {
 
 /* ---- 本文の中のURL ---- */
 .note-link {
-  color: var(--sat);
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
   overflow-wrap: anywhere;
@@ -1869,15 +1900,42 @@ body:has(.overlay--top) .toast {
   color: var(--bubble);
 }
 
-.jibun-dot {
+.jibun-theme {
   display: inline-block;
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
   margin-right: 6px;
-  background: var(--tag-fg);
+  padding: 0 6px;
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--text-sub);
+  white-space: nowrap;
   vertical-align: 1px;
+}
+
+/* 絞り込みは、下線で選ぶ形(色は使わない) */
+.jibun-chips:not(.jibun-chips--wrap) {
+  gap: 16px;
+  border-bottom: 1px solid var(--divider);
+  padding: 6px 0 0;
+}
+
+.jibun-chips:not(.jibun-chips--wrap) .jibun-chip {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 6px 0;
+  min-height: 38px;
+  color: var(--text-sub);
+}
+
+.jibun-chips:not(.jibun-chips--wrap) .jibun-chip.is-active {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+  font-weight: 700;
 }
 
 .jibun-card {
@@ -1903,18 +1961,17 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-today {
-  background: var(--accent-soft);
-  border: 1.5px solid var(--accent-deep);
+  border-left: 3px solid var(--accent);
 }
 
 .jibun-today__label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent-strong);
+  color: var(--text);
 }
 
 .jibun-today__q {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-family: var(--serif);
   font-size: 19px;
   line-height: 1.6;
   margin: 6px 0 12px;
@@ -1940,7 +1997,7 @@ body:has(.overlay--top) .toast {
   padding: 8px 14px;
   border-radius: 10px;
   background: var(--accent);
-  color: var(--accent-strong);
+  color: var(--on-accent);
   font-size: 14px;
   font-weight: 600;
 }
@@ -1951,7 +2008,8 @@ body:has(.overlay--top) .toast {
 
 .jibun-btn--ghost {
   background: transparent;
-  border: 1px solid var(--accent-deep);
+  border: 1px solid var(--text-faint);
+  color: var(--text);
   font-weight: 500;
 }
 
@@ -1975,14 +2033,6 @@ body:has(.overlay--top) .toast {
   border-bottom: none;
 }
 
-.jibun-q__bar {
-  width: 4px;
-  flex: none;
-  align-self: stretch;
-  border-radius: 2px;
-  background: var(--tag-fg);
-}
-
 .jibun-q__main {
   flex: 1;
   min-width: 0;
@@ -1992,12 +2042,13 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-q__text {
+  font-family: var(--serif);
   font-size: 15px;
   line-height: 1.55;
 }
 
 .jibun-q__pin {
-  color: var(--accent-deep);
+  color: var(--accent);
 }
 
 .jibun-meta {
@@ -2029,10 +2080,12 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-ins__s {
+  font-family: var(--serif);
   line-height: 1.6;
 }
 
 .jibun-ins--change {
+  font-family: var(--serif);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -2043,34 +2096,36 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-ins__arrow {
-  color: var(--accent-deep);
+  color: var(--accent);
   margin: 0 4px;
 }
 
 .jibun-conf {
   letter-spacing: 1px;
-  color: var(--accent-deep);
+  color: var(--accent);
 }
 
 .jibun-report {
+  font-family: var(--serif);
   white-space: pre-wrap;
   font-size: 14px;
   line-height: 1.75;
 }
 
 .jibun-talk__title {
+  font-family: var(--serif);
   font-size: 15px;
   font-weight: 600;
   margin: 4px 0 6px;
 }
 
 .jibun-talk__headline {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-family: var(--serif);
   font-size: 16px;
   line-height: 1.7;
   padding: 8px 12px;
   border-radius: 10px;
-  background: var(--accent-soft);
+  background: var(--bg-notes);
 }
 
 .jibun-talk__more {
@@ -2084,7 +2139,7 @@ body:has(.overlay--top) .toast {
   min-height: 36px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent-strong);
+  color: var(--text);
   cursor: pointer;
   list-style: none;
 }
@@ -2103,11 +2158,13 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-talk__summary {
+  font-family: var(--serif);
   font-size: 14px;
   line-height: 1.7;
 }
 
 .jibun-talk__quote {
+  font-family: var(--serif);
   margin: 8px 0 0;
   padding-left: 10px;
   border-left: 3px solid var(--divider);
@@ -2155,6 +2212,7 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-sheet__text {
+  font-family: var(--serif);
   width: 100%;
   min-height: 84px;
   resize: vertical;
@@ -2169,11 +2227,11 @@ body:has(.overlay--top) .toast {
 
 /* 途中で切り上げた問い */
 .jibun-paused {
-  border: 1.5px dashed var(--accent-deep);
+  border: 1px dashed var(--text-faint);
 }
 
 .jibun-paused__q {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-family: var(--serif);
   font-size: 17px;
   line-height: 1.6;
   margin: 4px 0 4px;
@@ -2184,8 +2242,8 @@ body:has(.overlay--top) .toast {
   margin-left: 6px;
   padding: 0 7px;
   border-radius: 8px;
-  background: var(--accent);
-  color: var(--accent-strong);
+  border: 1px solid var(--divider);
+  color: var(--text-sub);
   font-weight: 600;
 }
 
@@ -2193,35 +2251,34 @@ body:has(.overlay--top) .toast {
 .jibun-q__answer {
   font-size: 13px;
   line-height: 1.55;
-  color: var(--accent-strong);
+  color: var(--text);
 }
 
 .jibun-q__done {
-  color: var(--tag-green-fg);
+  color: var(--accent);
   font-weight: 700;
 }
 
 .jibun-pending {
-  background: var(--src-bg);
-  border: 1.5px solid var(--src-fg);
+  border: 1.5px solid var(--accent);
 }
 
 .jibun-pending__title {
   font-size: 12px;
   font-weight: 600;
-  color: var(--src-fg);
+  color: var(--accent);
 }
 
 .jibun-pending__q {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-family: var(--serif);
   font-size: 17px;
   line-height: 1.6;
   margin: 4px 0 0;
 }
 
 .jibun-pending .jibun-btn:not(.jibun-btn--plain) {
-  background: var(--src-fg);
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .jibun-import-link {
@@ -2229,10 +2286,10 @@ body:has(.overlay--top) .toast {
   width: 100%;
   min-height: 44px;
   margin: 18px 0 0;
-  border: 1px dashed var(--accent-deep);
+  border: 1px dashed var(--text-faint);
   border-radius: 12px;
   background: transparent;
-  color: var(--accent-strong);
+  color: var(--text-sub);
   font-size: 14px;
 }
 
@@ -2261,7 +2318,7 @@ body:has(.overlay--top) .toast {
 .jibun-stats b {
   font-size: 20px;
   font-weight: 700;
-  color: var(--accent-strong);
+  color: var(--text);
 }
 
 .jibun-stats span {
@@ -2272,13 +2329,13 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-shukatsu {
-  border: 1.5px solid var(--tag-blue-fg);
+  border: 1px solid var(--divider);
 }
 
 .jibun-shukatsu__title {
   font-size: 14px;
   font-weight: 700;
-  color: var(--tag-blue-fg);
+  color: var(--text);
 }
 
 .jibun-shukatsu .jibun-row {
@@ -2286,12 +2343,11 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-shukatsu .jibun-btn--ghost {
-  border-color: var(--tag-blue-fg);
-  color: var(--tag-blue-fg);
+  color: var(--text);
 }
 
 .jibun-profile-lead .jibun-ins__s {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-family: var(--serif);
   font-size: 16px;
 }
 
@@ -2324,8 +2380,8 @@ body:has(.overlay--top) .toast {
   margin-right: 6px;
   padding: 0 7px;
   border-radius: 8px;
-  background: var(--tag-blue-bg);
-  color: var(--tag-blue-fg);
+  background: var(--bg-notes);
+  color: var(--text-sub);
   font-size: 12px;
   font-weight: 600;
 }
@@ -2380,18 +2436,18 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-op--new {
-  background: var(--tag-green-bg);
-  color: var(--tag-green-fg);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .jibun-op--changed {
-  background: var(--tag-apricot-bg);
-  color: var(--tag-apricot-fg);
+  background: var(--text);
+  color: var(--bubble);
 }
 
 .jibun-op--withdrawn {
-  background: var(--tag-coral-bg);
-  color: var(--tag-coral-fg);
+  background: transparent;
+  color: var(--text-sub);
 }
 
 .segmented__item {
@@ -2577,6 +2633,55 @@ body:has(.overlay--top) .toast {
 
 .jibun-link.is-active {
   background: var(--bg-notes);
-  border-color: var(--accent-deep);
+  border-color: var(--accent);
   font-weight: 600;
+}
+
+/* ---- 探す(タグと検索) ---- */
+.explore-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px -6px;
+}
+
+.explore-section-head h2 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ---- 設定: アクセントの色 ---- */
+.accent-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.accent-swatch {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+
+.accent-swatch i {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+.accent-swatch.is-active {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.accent-swatch.is-active i {
+  box-shadow: 0 0 0 2px var(--bubble), 0 0 0 4px var(--text);
 }

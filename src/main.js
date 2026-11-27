@@ -4,8 +4,10 @@ import htm from 'htm';
 import { App } from './App.js';
 import { startSync } from './lib/sync.js';
 import { startViewportVars } from './lib/viewport.js';
+import { applyAccent, readAccent } from './lib/prefs.js';
 
 startViewportVars();
+applyAccent(readAccent());
 
 const html = htm.bind(React.createElement);
 

@@ -13,12 +13,6 @@ const ICONS = {
     <path d="M10.2 8.8a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3" />
     <line x1="12" y1="13.6" x2="12" y2="13.7" />
   </svg>`,
-  tag: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="4" y1="9" x2="20" y2="9" />
-    <line x1="4" y1="15" x2="20" y2="15" />
-    <line x1="10" y1="4" x2="7" y2="20" />
-    <line x1="17" y1="4" x2="14" y2="20" />
-  </svg>`,
   search: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="11" cy="11" r="7" />
     <line x1="21" y1="21" x2="16.2" y2="16.2" />
@@ -32,8 +26,7 @@ const ICONS = {
 const TABS = [
   { key: 'home', icon: 'home', label: 'ホーム' },
   { key: 'jibun', icon: 'jibun', label: 'じぶん' },
-  { key: 'tags', icon: 'tag', label: 'タグ' },
-  { key: 'search', icon: 'search', label: '検索' },
+  { key: 'explore', icon: 'search', label: '探す' },
   { key: 'settings', icon: 'settings', label: '設定' },
 ];
 

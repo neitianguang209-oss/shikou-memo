@@ -13,15 +13,11 @@ const CACHE_STORE = 'jibun-note:cache';
 
 // 色はタグと同じパレットから選ぶ(画面にタグ色以外の色を増やさない)
 export const THEMES = [
-  { name: 'キャリア', colorKey: 'blue' },
-  { name: '恋愛・人間関係', colorKey: 'pink' },
-  { name: '人生観', colorKey: 'olive' },
-  { name: '日々の気持ち', colorKey: 'apricot' },
+  { name: 'キャリア' },
+  { name: '恋愛・人間関係' },
+  { name: '人生観' },
+  { name: '日々の気持ち' },
 ];
-
-export function themeColorKey(theme) {
-  return (THEMES.find((t) => t.name === theme) || THEMES[2]).colorKey;
-}
 
 export function readKey() {
   try { return localStorage.getItem(KEY_STORE) || ''; } catch (e) { return ''; }

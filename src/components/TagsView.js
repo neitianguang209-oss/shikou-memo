@@ -19,7 +19,7 @@ const UP = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const DOWN = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 10 12 16 18 10" /></svg>`;
 const PLUS = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>`;
 
-export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed, dataVersion }) {
+export function TagsView({ header, results, onJumpToHome, startEditToken, onStartEditConsumed, dataVersion }) {
   const [tags, setTags] = useState([]);
   const [notes, setNotes] = useState([]);
   const [editMode, setEditMode] = useState(false);
@@ -106,7 +106,7 @@ export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed, da
         <div class="view-header">
           <button class="view-header__back" onClick=${() => setDetailTagId(null)} aria-label="タグの一覧に戻る">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 6 9 12 15 18" /></svg>
-            タグ
+            探す
           </button>
           <div class="view-header__title view-header__title--tag">
             ${tag && tag.colorKey
@@ -147,16 +147,18 @@ export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed, da
 
   return html`
     <div class="tags-view">
-      <div class="view-header">
-        <div class="view-header__title">タグ</div>
-        ${tags.length > 0 && html`
-          <button class="view-header__action" onClick=${() => setEditMode((v) => !v)}>${editMode ? '完了' : '編集'}</button>
-        `}
-        <button class="view-header__icon" onClick=${() => setShowCreate(true)} aria-label="タグを作る">${PLUS}</button>
-      </div>
+      ${header}
+      ${results || html`
       <div class="list-section">
+        <div class="explore-section-head">
+          <h2>タグ</h2>
+          ${tags.length > 0 && html`
+            <button class="view-header__action" onClick=${() => setEditMode((v) => !v)}>${editMode ? '完了' : '編集'}</button>
+          `}
+          <button class="view-header__icon" onClick=${() => setShowCreate(true)} aria-label="タグを作る">${PLUS}</button>
+        </div>
         ${tags.length === 0
-          ? html`<div class="view-placeholder">タグはまだありません。右上の＋から作れます。</div>`
+          ? html`<div class="view-placeholder">タグはまだありません。「タグ」の右の＋から作れます。</div>`
           : html`
               <div class="list-card">
                 ${tags.map(
@@ -200,6 +202,7 @@ export function TagsView({ onJumpToHome, startEditToken, onStartEditConsumed, da
           </div>
         </div>
       </div>
+      `}
       ${showCreate && html`
         <${TagEditorModal}
           mode="create"

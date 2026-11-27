@@ -33,13 +33,21 @@ function buildWeekGrid(selectedDateKey, weekOffset = 0) {
 }
 
 // dayDots: Map<dateKey, (タグの色キー | null)[]>。その日のメモのタグ色を最大3つ点で出す(タグなしは灰色)
-function renderCells(cells, { selectedDateKey, todayKey, dayDots, onSelectDate }) {
+function amountWidth(count) {
+  if (count >= 8) return 28;
+  if (count >= 6) return 22;
+  if (count >= 4) return 16;
+  return count >= 3 ? 10 : 0;
+}
+
+function renderCells(cells, { selectedDateKey, todayKey, dayDots, dayCounts, onSelectDate }) {
   return cells.map((date, i) => {
     if (!date) return html`<div class="calendar__cell" key=${`empty-${i}`}></div>`;
     const dateKey = toDateKey(date);
     const isToday = dateKey === todayKey;
     const isSelected = dateKey === selectedDateKey;
     const dots = (dayDots && dayDots.get(dateKey)) || [];
+    const count = (dayCounts && dayCounts.get(dateKey)) || 0;
     const weekday = date.getDay();
     const circleClass = [
       'calendar__day-circle',
@@ -54,7 +62,7 @@ function renderCells(cells, { selectedDateKey, todayKey, dayDots, onSelectDate }
       <button
         class="calendar__cell"
         key=${dateKey}
-        aria-label=${`${date.getMonth() + 1}月${date.getDate()}日${dots.length ? '（メモあり）' : ''}`}
+        aria-label=${`${date.getMonth() + 1}月${date.getDate()}日${count ? `（メモ${count}件）` : ''}`}
         aria-pressed=${isSelected}
         onClick=${() => onSelectDate(dateKey)}
       >
@@ -62,6 +70,7 @@ function renderCells(cells, { selectedDateKey, todayKey, dayDots, onSelectDate }
         <span class="calendar__dots">
           ${dots.map((c, j) => html`<span key=${j} class=${`calendar__dot${c ? ' is-tag' : ''}`} style=${c ? tagColorVars(c) : null}></span>`)}
         </span>
+        <span class="calendar__amount" style=${{ width: `${amountWidth(count)}px` }}></span>
       </button>
     `;
   });
@@ -71,7 +80,7 @@ function renderCells(cells, { selectedDateKey, todayKey, dayDots, onSelectDate }
 // dayDots: Map<dateKey, 色キー[]>(上の renderCells)。expanded: falseなら選択中の週だけ表示。
 // onSelectDate(dateKey). onChangeMonth(deltaMonths)は月表示のスワイプ用。
 // onShiftWeek(deltaWeeks)は週表示のスワイプ用。
-export function Calendar({ year, month, selectedDateKey, todayKey, dayDots, expanded, onSelectDate, onChangeMonth, onShiftWeek }) {
+export function Calendar({ year, month, selectedDateKey, todayKey, dayDots, dayCounts, expanded, onSelectDate, onChangeMonth, onShiftWeek }) {
   const monthDragRef = useRef(null);
 
   const weekViewportRef = useRef(null);
@@ -158,7 +167,7 @@ export function Calendar({ year, month, selectedDateKey, todayKey, dayDots, expa
   `;
 
   if (expanded === false) {
-    const cellCtx = { selectedDateKey, todayKey, dayDots, onSelectDate };
+    const cellCtx = { selectedDateKey, todayKey, dayDots, dayCounts, onSelectDate };
     const pages = [-1, 0, 1].map((offset) => buildWeekGrid(selectedDateKey, offset));
     const trackStyle = {
       transform: `translateX(calc(-33.3333% + ${weekDragX}px))`,
@@ -202,7 +211,7 @@ export function Calendar({ year, month, selectedDateKey, todayKey, dayDots, expa
     >
       ${weekdaysRow}
       <div class="calendar__grid">
-        ${renderCells(cells, { selectedDateKey, todayKey, dayDots, onSelectDate })}
+        ${renderCells(cells, { selectedDateKey, todayKey, dayDots, dayCounts, onSelectDate })}
       </div>
     </div>
   `;

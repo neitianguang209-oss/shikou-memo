@@ -1,7 +1,8 @@
-# 思考メモ アイコン生成(Node/Python 不要)
+﻿# 思考メモ アイコン生成(Node/Python 不要)
 # 使い方: powershell -ExecutionPolicy Bypass -File icons/render-icons.ps1
 # 元絵は icons/icon.svg。Edge(ヘッドレス)で 1024px に描き、.NET System.Drawing で各サイズに縮小する。
-# ・icon-192 / icon-512 / favicon-32 は角丸  ・icon-180(iPhone)と maskable は四角(角は端末が丸める)
+# ・どれも生成り一色の四角(角は端末が丸める。先に丸めると外側が別の色に見える)
+# アイコンを変えたら index.html / manifest.json / sw.js の ?v= と sw.js の CACHE_NAME を上げる
 Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -25,46 +26,28 @@ if (-not (Test-Path $big)) { throw "描けませんでした (exit $($p.ExitCode
 
 $src = [System.Drawing.Image]::FromFile($big)
 
-function Save-Icon([int]$size, [string]$name, [bool]$rounded) {
+function Save-Icon([int]$size, [string]$name, [double]$scale = 1) {
   $bmp = New-Object System.Drawing.Bitmap($size, $size)
   $g = [System.Drawing.Graphics]::FromImage($bmp)
   $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
   $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
   $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
   $g.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
-  $g.Clear([System.Drawing.Color]::Transparent)
-  if ($rounded) {
-    # 縮小した絵を筆にして、角丸の形に塗る(ふちがなめらかになる)
-    $scaled = New-Object System.Drawing.Bitmap($size, $size)
-    $gs = [System.Drawing.Graphics]::FromImage($scaled)
-    $gs.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-    $gs.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-    $gs.DrawImage($src, 0, 0, $size, $size)
-    $gs.Dispose()
-    $d = [single]($size * 0.44)
-    $rr = New-Object System.Drawing.Drawing2D.GraphicsPath
-    $rr.AddArc(0, 0, $d, $d, 180, 90)
-    $rr.AddArc($size - $d, 0, $d, $d, 270, 90)
-    $rr.AddArc($size - $d, $size - $d, $d, $d, 0, 90)
-    $rr.AddArc(0, $size - $d, $d, $d, 90, 90)
-    $rr.CloseFigure()
-    $brush = New-Object System.Drawing.TextureBrush($scaled)
-    $g.FillPath($brush, $rr)
-    $brush.Dispose()
-    $scaled.Dispose()
-  } else {
-    $g.DrawImage($src, 0, 0, $size, $size)
-  }
+  # maskable は Android で丸く切られるので、まわりを地の色にして絵を小さめに置く
+  $g.Clear($src.GetPixel(2, 2))
+  $w = [int]($size * $scale)
+  $o = [int](($size - $w) / 2)
+  $g.DrawImage($src, $o, $o, $w, $w)
   $bmp.Save((Join-Path $root $name), [System.Drawing.Imaging.ImageFormat]::Png)
   $g.Dispose()
   $bmp.Dispose()
 }
 
-Save-Icon 512 'icon-512.png' $true
-Save-Icon 192 'icon-192.png' $true
-Save-Icon 512 'icon-maskable-512.png' $false
-Save-Icon 180 'icon-180.png' $false
-Save-Icon 32 'favicon-32.png' $true
+Save-Icon 512 'icon-512.png'
+Save-Icon 192 'icon-192.png'
+Save-Icon 512 'icon-maskable-512.png' 0.82
+Save-Icon 180 'icon-180.png'
+Save-Icon 32 'favicon-32.png'
 
 $src.Dispose()
 Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue

@@ -115,7 +115,7 @@ export function NoteItem({ note, tags, variant, highlighted, onTap, onLongPress 
   const body = html`
     <div
       ref=${bodyRef}
-      class=${`note-text${isExpanded ? '' : ' is-clamped'}`}
+      class=${`note-text${isExpanded ? '' : ' is-clamped'}${clamped ? ' is-overflowing' : ''}${note.body.length >= 180 ? ' is-long' : ''}`}
     ><${LinkedText} text=${note.body} /></div>
   `;
   const more = clamped && html`<button class="note-more" onClick=${() => setIsExpanded(true)}>続きを読む</button>`;
