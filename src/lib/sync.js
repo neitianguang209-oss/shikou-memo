@@ -14,6 +14,7 @@
 // 別の端末で書かれた瞬間(クラウドからの知らせ。live.js)
 
 import * as db from './db.js';
+import { readKey } from './jibun.js';
 import { startLive } from './live.js';
 
 const RPC_URL = 'https://gzayrjlhruhvklsidraw.supabase.co/rest/v1/rpc/shikou_memo_sync';
@@ -26,7 +27,7 @@ const REQUEST_TIMEOUT_MS = 20000;
 const RETRY_STEPS_MS = [5000, 15000, 60000, 180000, 300000];
 
 const state = {
-  phase: 'idle',        // 'idle' | 'syncing' | 'ok' | 'offline' | 'error'
+  phase: 'idle',        // 'idle' | 'syncing' | 'ok' | 'offline' | 'error' | 'nokey'(合言葉がまだ・ちがう)
   lastSyncedAt: null,   // 最後にクラウドとやりとりできた時刻(ms)
   everSynced: false,    // この端末で一度でもクラウドとやりとりできたか
   pending: 0,           // まだクラウドに届いていない変更の数
@@ -75,7 +76,7 @@ function toWire(c) {
 }
 
 async function callRpc(changes, since) {
-  const body = JSON.stringify({ p_changes: changes.map(toWire), p_since: since, p_device: deviceLabel() });
+  const body = JSON.stringify({ p_key: readKey(), p_changes: changes.map(toWire), p_since: since, p_device: deviceLabel() });
   const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS) : null;
   try {
@@ -94,6 +95,7 @@ async function callRpc(changes, since) {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      if (text.includes('bad key')) throw new Error('bad key');
       throw new Error(`クラウドの応答 ${res.status} ${text.slice(0, 120)}`);
     }
     return await res.json();
@@ -140,6 +142,13 @@ export function syncNow() {
     retryTimer = null;
   }
   running = (async () => {
+    // 合言葉が無いうちはクラウドとやりとりしない(書いたものは端末の送る箱に残る)
+    if (!readKey()) {
+      setState({ phase: 'nokey', error: '', pending: await safeCount() });
+      await null;
+      running = null;
+      return;
+    }
     setState({ phase: 'syncing' });
     try {
       let rounds = 0;
@@ -158,6 +167,10 @@ export function syncNow() {
       db.setMeta('lastSyncedAt', now).catch(() => {});
       setState({ phase: 'ok', lastSyncedAt: now, everSynced: true, error: '', pending: await safeCount() });
     } catch (e) {
+      if (e && e.message === 'bad key') {
+        setState({ phase: 'nokey', error: 'bad key', pending: await safeCount() });
+        return;
+      }
       const offline = navigator.onLine === false || (e && (e.name === 'TypeError' || e.name === 'AbortError'));
       setState({ phase: offline ? 'offline' : 'error', error: String((e && e.message) || e), pending: await safeCount() });
       scheduleRetry();
@@ -232,6 +245,7 @@ export function startSync() {
     }
   });
   window.addEventListener('online', () => syncNow());
+  window.addEventListener('shikou-key', () => syncNow());
   window.addEventListener('focus', syncIfStale);
   // iPhone で前の画面から戻ったとき(ページが保存から復元された場合)
   window.addEventListener('pageshow', (e) => { if (e.persisted) syncIfStale(); });

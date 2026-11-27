@@ -2708,3 +2708,11 @@ body:has(.overlay--top) .toast {
   border-radius: 50%;
   background: var(--tag-fg);
 }
+
+/* 同期の合言葉を入れる札 */
+.sync-key { margin: 12px 16px; padding: 12px 14px; border-radius: 14px; background: var(--bubble); color: var(--text-sub); font-size: 13px; line-height: 1.6; flex-shrink: 0; }
+.sync-key p { margin: 0 0 8px; }
+.sync-key__row { display: flex; gap: 8px; }
+.sync-key__row input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(128,128,128,.35); background: transparent; color: inherit; font-size: 16px; }
+.sync-key__row button { flex-shrink: 0; padding: 8px 16px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: 14px; }
+.sync-key__row button:disabled { opacity: .5; }

@@ -31,6 +31,8 @@ export function readKey() {
 
 export function writeKey(key) {
   try { localStorage.setItem(KEY_STORE, key); } catch (e) { /* 保存できなくても、この回は使える */ }
+  // 日記の同期も同じ合言葉を使うので、入ったらすぐ同期し直せるように知らせる
+  if (key) { try { window.dispatchEvent(new Event('shikou-key')); } catch (e) { /* 知らせは無くても2分おきに同期する */ } }
 }
 
 // 合言葉入りのリンク(#k=... や #jibun&k=...)で開かれたら端末に保存して、アドレス欄から消す。

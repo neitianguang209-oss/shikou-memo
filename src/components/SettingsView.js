@@ -8,7 +8,7 @@ import { syncNow } from '../lib/sync.js';
 import { ACCENTS, readAccent, writeAccent } from '../lib/prefs.js';
 
 const html = htm.bind(React.createElement);
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.3.0';
 const LAST_EXPORT_KEY = 'shikou-memo:lastExportAt';
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -68,6 +68,8 @@ function readLastExport() {
 function syncStatusText(sync) {
   const waiting = sync.pending > 0 ? `送信待ち ${sync.pending}件` : '';
   switch (sync.phase) {
+    case 'nokey':
+      return `合言葉を入れると保存されます${waiting ? `（${waiting}）` : ''}`;
     case 'syncing':
       return '保存しています…';
     case 'ok':

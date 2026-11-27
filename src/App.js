@@ -7,10 +7,28 @@ import { SettingsView } from './components/SettingsView.js';
 import { JibunView } from './components/JibunView.js';
 import { getSyncState, onRemoteData, onSyncState } from './lib/sync.js';
 import { takeLinkedDraft } from './lib/inbox.js';
-import { takeKeyFromHash } from './lib/jibun.js';
+import { takeKeyFromHash, writeKey } from './lib/jibun.js';
 import { readNoteStyle, writeNoteStyle } from './lib/prefs.js';
 
 const html = htm.bind(React.createElement);
+
+// 日記の同期は合言葉で守る。この端末でまだ入っていない・ちがうときに出す
+function SyncKeyCard({ wrong }) {
+  const [value, setValue] = useState('');
+  const submit = (e) => {
+    e.preventDefault();
+    if (value.trim()) { writeKey(value.trim()); setValue(''); }
+  };
+  return html`
+    <form class="sync-key" onSubmit=${submit}>
+      <p>${wrong ? '合言葉がちがうようです。もう一度入れてください。' : 'クラウドの保存は合言葉で守るようになりました。家計簿・就活アプリと同じ合言葉を、この端末で1回だけ入れてください。それまで書いたメモは、この端末に残ります。'}</p>
+      <div class="sync-key__row">
+        <input type="password" placeholder="合言葉" autocomplete="current-password" autocapitalize="off" value=${value} onInput=${(e) => setValue(e.target.value)} />
+        <button type="submit" disabled=${!value.trim()}>つなぐ</button>
+      </div>
+    </form>
+  `;
+}
 
 export function App() {
   const [view, setView] = useState('home');
@@ -91,6 +109,7 @@ export function App() {
   return html`
     <div class="app">
       <div class="app-body" ref=${bodyRef}>
+        ${sync.phase === 'nokey' && view !== 'jibun' && html`<${SyncKeyCard} wrong=${sync.error === 'bad key'} />`}
         ${view === 'home' && html`<${HomeView}
           jump=${homeJump}
           onJumpConsumed=${() => setHomeJump(null)}

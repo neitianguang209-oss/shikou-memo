@@ -20,6 +20,7 @@ const CHEVRON_DOWN = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentCo
 
 function syncWaitingText(sync) {
   if (!sync || sync.pending === 0) return '';
+  if (sync.phase === 'nokey') return `未送信 ${sync.pending}件 · 合言葉を入れると送ります`;
   if (sync.phase === 'offline') return `未送信 ${sync.pending}件 · 電波が戻ったら自動で送ります`;
   if (sync.phase === 'error') return `未送信 ${sync.pending}件 · 自動でやり直しています`;
   return '';
@@ -480,7 +481,9 @@ export function HomeView({ jump, onJumpConsumed, incomingDraft, onIncomingConsum
       >
         ${showFirstSync && html`
           <div class="sync-banner" role="status">
-            ${sync.phase === 'offline' || sync.phase === 'error'
+            ${sync.phase === 'nokey'
+              ? html`<span>合言葉を入れると、クラウドのメモが戻ります。</span>`
+              : sync.phase === 'offline' || sync.phase === 'error'
               ? html`
                   <span>まだクラウドのメモを読み込めていません。電波のある所で開くと自動で戻ります。</span>
                   <button class="sync-banner__retry" onClick=${() => syncNow()}>もう一度</button>
