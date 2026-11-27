@@ -13,9 +13,8 @@
   --accent: #2C7A53;
   --on-accent: #FFFFFF;
   --accent-soft: color-mix(in srgb, var(--accent) 10%, #FFFFFF);
-  /* 本文と見出しは明朝、タグ・日付・ボタンなどの補助はゴシック */
-  --serif: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "BIZ UDMincho", "Noto Serif JP", serif;
-  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+  /* 書体は家計簿・読書記録と同じ端末のゴシック */
+  --sans: -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo', system-ui, sans-serif;
   /* 曜日(くすませた赤と青) */
   --sun: #B5594E;
   --sat: #46719C;
@@ -52,9 +51,10 @@ html, body {
   height: 100%;
   background: var(--bg-notes);
   color: var(--text);
-  font-family: var(--sans);
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--sans);
   overscroll-behavior: none;
 }
 
@@ -158,7 +158,7 @@ input:focus-visible {
   padding: 3px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.4;
   background: var(--tag-bg);
   color: var(--tag-fg);
@@ -216,9 +216,8 @@ input:focus-visible {
 }
 
 .home__date-heading {
-  font-family: var(--serif);
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
   color: var(--text);
   margin: 0;
@@ -394,9 +393,8 @@ input:focus-visible {
 }
 
 .home__mini-date {
-  font-family: var(--serif);
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
 }
 
@@ -437,9 +435,7 @@ input:focus-visible {
 
 /* ---- メモ1件(3つの見せ方で共通) ---- */
 .note-text {
-  font-family: var(--serif);
-  font-size: 16.5px;
-  letter-spacing: 0.02em;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--text);
   white-space: pre-wrap;
@@ -512,7 +508,7 @@ input:focus-visible {
   background: var(--bubble);
   color: var(--text-sub);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.6;
   white-space: nowrap;
 }
@@ -709,10 +705,8 @@ input:focus-visible {
 }
 
 .diary-row .note-text {
-  font-family: var(--serif);
-  font-size: 16.5px;
-  line-height: 1.85;
-  letter-spacing: 0.02em;
+  font-size: 16px;
+  line-height: 1.75;
 }
 
 .diary-row .note-more {
@@ -966,8 +960,6 @@ input:focus-visible {
   line-height: 1.6;
   color: var(--text);
   background: transparent;
-  font-family: var(--serif);
-  letter-spacing: 0.02em;
 }
 
 .input-sheet__textarea::placeholder {
@@ -977,7 +969,7 @@ input:focus-visible {
 
 .input-sheet__error {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-sub);
 }
 
@@ -1000,7 +992,7 @@ input:focus-visible {
   border-radius: 50%;
   flex-shrink: 0;
   font-size: 18px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-sub);
   background: var(--bg-notes);
 }
@@ -1067,7 +1059,7 @@ body:has(.overlay--top) .toast {
 
 .modal-card__title {
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
 }
 
@@ -1092,7 +1084,7 @@ body:has(.overlay--top) .toast {
 .modal-card__error {
   font-size: 13px;
   color: var(--text-sub);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .color-picker {
@@ -1132,13 +1124,13 @@ body:has(.overlay--top) .toast {
 .modal-card__btn--primary {
   background: var(--accent);
   color: var(--on-accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .modal-card__btn--primary.is-danger {
   background: var(--text);
   color: var(--bubble);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .action-sheet {
@@ -1193,7 +1185,7 @@ body:has(.overlay--top) .toast {
   background: var(--bubble);
   border-radius: 14px;
   border-bottom: none;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ---- 汎用ヘッダー ---- */
@@ -1211,9 +1203,8 @@ body:has(.overlay--top) .toast {
 }
 
 .view-header__title {
-  font-family: var(--serif);
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   flex: 1;
   min-width: 0;
@@ -1344,6 +1335,7 @@ body:has(.overlay--top) .toast {
 }
 
 .tag-row__name {
+  font-weight: 600;
   flex: 1;
   min-width: 0;
   font-size: 16px;
@@ -1419,7 +1411,7 @@ body:has(.overlay--top) .toast {
 
 .tag-detail__date {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-sub);
   margin: 14px 4px 8px;
 }
@@ -1443,7 +1435,6 @@ body:has(.overlay--top) .toast {
 }
 
 .tag-detail__note-body {
-  font-family: var(--serif);
   flex: 1;
   min-width: 0;
   font-size: 15px;
@@ -1550,7 +1541,6 @@ body:has(.overlay--top) .toast {
 }
 
 .search-result__body {
-  font-family: var(--serif);
   font-size: 15px;
   color: var(--text);
   line-height: 1.6;
@@ -1580,6 +1570,7 @@ body:has(.overlay--top) .toast {
 }
 
 .settings-row {
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1612,7 +1603,7 @@ body:has(.overlay--top) .toast {
 
 .settings-hint--warn {
   color: var(--text);
-  font-weight: 500;
+  font-weight: 600;
   margin-top: 2px;
 }
 
@@ -1664,7 +1655,7 @@ body:has(.overlay--top) .toast {
   background: var(--accent);
   color: var(--on-accent);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: inherit;
   text-align: left;
 }
@@ -1680,7 +1671,7 @@ body:has(.overlay--top) .toast {
   background: var(--bubble);
   color: var(--text);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .inbox-banner__text {
@@ -1809,7 +1800,7 @@ body:has(.overlay--top) .toast {
 .segmented__item.is-active {
   background: var(--bubble);
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
   box-shadow: 0 1px 3px rgba(23, 25, 23, 0.12);
 }
 
@@ -1906,9 +1897,8 @@ body:has(.overlay--top) .toast {
   padding: 0 6px;
   border: 1px solid var(--divider);
   border-radius: 4px;
-  font-family: var(--sans);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.6;
   color: var(--text-sub);
   white-space: nowrap;
@@ -1966,12 +1956,11 @@ body:has(.overlay--top) .toast {
 
 .jibun-today__label {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
 }
 
 .jibun-today__q {
-  font-family: var(--serif);
   font-size: 19px;
   line-height: 1.6;
   margin: 6px 0 12px;
@@ -1999,7 +1988,7 @@ body:has(.overlay--top) .toast {
   background: var(--accent);
   color: var(--on-accent);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .jibun-btn:disabled {
@@ -2010,7 +1999,7 @@ body:has(.overlay--top) .toast {
   background: transparent;
   border: 1px solid var(--text-faint);
   color: var(--text);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .jibun-btn--plain {
@@ -2042,7 +2031,7 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-q__text {
-  font-family: var(--serif);
+  font-weight: 600;
   font-size: 15px;
   line-height: 1.55;
 }
@@ -2060,7 +2049,7 @@ body:has(.overlay--top) .toast {
 
 .jibun-section {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-sub);
   margin: 18px 2px 4px;
 }
@@ -2080,12 +2069,10 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-ins__s {
-  font-family: var(--serif);
   line-height: 1.6;
 }
 
 .jibun-ins--change {
-  font-family: var(--serif);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -2106,21 +2093,18 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-report {
-  font-family: var(--serif);
   white-space: pre-wrap;
   font-size: 14px;
   line-height: 1.75;
 }
 
 .jibun-talk__title {
-  font-family: var(--serif);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 4px 0 6px;
 }
 
 .jibun-talk__headline {
-  font-family: var(--serif);
   font-size: 16px;
   line-height: 1.7;
   padding: 8px 12px;
@@ -2138,7 +2122,7 @@ body:has(.overlay--top) .toast {
   gap: 4px;
   min-height: 36px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   cursor: pointer;
   list-style: none;
@@ -2158,13 +2142,11 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-talk__summary {
-  font-family: var(--serif);
   font-size: 14px;
   line-height: 1.7;
 }
 
 .jibun-talk__quote {
-  font-family: var(--serif);
   margin: 8px 0 0;
   padding-left: 10px;
   border-left: 3px solid var(--divider);
@@ -2212,7 +2194,6 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-sheet__text {
-  font-family: var(--serif);
   width: 100%;
   min-height: 84px;
   resize: vertical;
@@ -2231,7 +2212,6 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-paused__q {
-  font-family: var(--serif);
   font-size: 17px;
   line-height: 1.6;
   margin: 4px 0 4px;
@@ -2244,7 +2224,7 @@ body:has(.overlay--top) .toast {
   border-radius: 8px;
   border: 1px solid var(--divider);
   color: var(--text-sub);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ---- ChatGPT とつなぐ・じぶん像 (v1.8.0) ---- */
@@ -2265,12 +2245,11 @@ body:has(.overlay--top) .toast {
 
 .jibun-pending__title {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--accent);
 }
 
 .jibun-pending__q {
-  font-family: var(--serif);
   font-size: 17px;
   line-height: 1.6;
   margin: 4px 0 0;
@@ -2347,7 +2326,6 @@ body:has(.overlay--top) .toast {
 }
 
 .jibun-profile-lead .jibun-ins__s {
-  font-family: var(--serif);
   font-size: 16px;
 }
 
@@ -2383,7 +2361,7 @@ body:has(.overlay--top) .toast {
   background: var(--bg-notes);
   color: var(--text-sub);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .jibun-btn--small {
@@ -2430,7 +2408,7 @@ body:has(.overlay--top) .toast {
   padding: 0 7px;
   border-radius: 8px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   background: var(--tag-gray-bg);
   color: var(--tag-gray-fg);
 }
@@ -2480,7 +2458,7 @@ body:has(.overlay--top) .toast {
   cursor: pointer;
   min-height: 32px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-sub);
 }
 
@@ -2572,7 +2550,7 @@ body:has(.overlay--top) .toast {
 
 .jibun-pasttalk__head {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.5;
 }
 
@@ -2589,7 +2567,7 @@ body:has(.overlay--top) .toast {
   border-radius: 12px;
   background: var(--bg-notes);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.5;
 }
 
@@ -2606,7 +2584,7 @@ body:has(.overlay--top) .toast {
   display: flex;
   align-items: center;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .jibun-links__list {
@@ -2634,7 +2612,7 @@ body:has(.overlay--top) .toast {
 .jibun-link.is-active {
   background: var(--bg-notes);
   border-color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ---- 探す(タグと検索) ---- */
@@ -2648,9 +2626,8 @@ body:has(.overlay--top) .toast {
 .explore-section-head h2 {
   flex: 1;
   margin: 0;
-  font-family: var(--serif);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ---- 設定: アクセントの色 ---- */
