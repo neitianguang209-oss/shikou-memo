@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shikou-memo-v25';
+const CACHE_NAME = 'shikou-memo-v26';
 // self.registration.scope 基準の相対パス（サブパス配信のGitHub Pages等でも動くように）
 const APP_SHELL = [
   './',
@@ -31,9 +31,9 @@ const APP_SHELL = [
   './src/components/TagEditorModal.js',
   './src/components/ActionSheet.js',
   './src/components/ConfirmDialog.js',
-  './icons/icon-192.png?v=2',
-  './icons/icon-512.png?v=2',
-  './icons/icon-180.png?v=2',
+  './icons/icon-192.png?v=3',
+  './icons/icon-512.png?v=3',
+  './icons/icon-180.png?v=3',
 ].map((p) => new URL(p, self.registration.scope).toString());
 
 const INDEX_URL = new URL('./index.html', self.registration.scope).toString();

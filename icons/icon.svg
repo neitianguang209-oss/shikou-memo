@@ -17,9 +17,9 @@
     <circle cx="211" cy="181" r="9.5" fill="#DCAE98"/>
     <path d="M141 189.5q23 15 42-5" fill="none" stroke="#1F2D20" stroke-width="5.4" stroke-linecap="round"/>
     <!-- ポンチョ -->
-    <path fill="#AFCDE3" d="M123 219.5Q162 237 202 212.5L255 291.5Q164 315 72 291.5Z"/>
-    <path d="M128 224q34 18 70-3" fill="none" stroke="#7FA0B8" stroke-width="6.4" stroke-linecap="round"/>
-    <path d="M91 267.5l10 2M109 271l10 1.5M202 273l11-1.2M220 269.8l11-1.8" fill="none" stroke="#F8F2DC" stroke-width="6.4"/>
+    <path fill="#D2944A" d="M123 219.5Q162 237 202 212.5L255 291.5Q164 315 72 291.5Z"/>
+    <path d="M128 224q34 18 70-3" fill="none" stroke="#B0732F" stroke-width="6.4" stroke-linecap="round"/>
+    <path d="M91 267.5l10 2M109 271l10 1.5M202 273l11-1.2M220 269.8l11-1.8" fill="none" stroke="#F6F1E4" stroke-width="6.4"/>
     <!-- あごの手と、すその手 -->
     <circle cx="171.5" cy="216" r="14.2" fill="#5F8F66"/>
     <circle cx="172.3" cy="217.2" r="12.6" fill="#8FCB8E"/>
