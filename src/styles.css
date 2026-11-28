@@ -2716,3 +2716,76 @@ body:has(.overlay--top) .toast {
 .sync-key__row input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(128,128,128,.35); background: transparent; color: inherit; font-size: 16px; }
 .sync-key__row button { flex-shrink: 0; padding: 8px 16px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: 14px; }
 .sync-key__row button:disabled { opacity: .5; }
+
+/* ---- じぶん v3: 仮説・20分セッション・ふりかえり ---- */
+.jibun-catch { display: flex; gap: 8px; margin: 10px 0 0; }
+.jibun-catch input { flex: 1; min-width: 0; min-height: 40px; padding: 8px 12px; border: 1px solid var(--divider); border-radius: 10px; background: var(--bubble); color: var(--text); font-size: 16px; }
+.jibun-catch button { flex: none; padding: 0 14px; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-size: 14px; font-weight: 700; }
+.jibun-catch button:disabled { opacity: 0.45; }
+
+.jibun-fold { margin: 12px 0 0; }
+.jibun-fold > summary { display: flex; align-items: center; min-height: 40px; padding: 0 4px; font-size: 14px; font-weight: 600; color: var(--text-sub); cursor: pointer; list-style: none; }
+.jibun-fold > summary::-webkit-details-marker { display: none; }
+.jibun-fold > summary::after { content: '▾'; margin-left: auto; font-size: 12px; }
+.jibun-fold[open] > summary::after { content: '▴'; }
+.jibun-fold--card { padding: 2px 12px; border-radius: 12px; background: var(--bubble); box-shadow: var(--shadow-soft); }
+
+.jibun-more { display: block; width: 100%; min-height: 40px; font-size: 13px; color: var(--text-sub); }
+
+button.jibun-today { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; }
+button.jibun-today .jibun-today__q { margin: 2px 0 0; }
+
+.jibun-cert { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 400; color: var(--text-sub); }
+
+.jibun-qhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.jibun-stage { font-size: 12px; font-weight: 700; color: var(--text-sub); }
+.jibun-star { min-height: 36px; padding: 0 4px; font-size: 13px; color: var(--text-sub); }
+.jibun-star.is-on { color: var(--accent); font-weight: 700; }
+.jibun-qtext { display: block; width: 100%; margin: 4px 0 12px; text-align: left; font-size: 18px; font-weight: 700; line-height: 1.6; color: var(--text); }
+
+.jibun-hypo { display: flex; flex-direction: column; gap: 4px; width: 100%; margin: 0 0 12px; padding: 12px; border-radius: 12px; background: var(--bg-notes); text-align: left; }
+.jibun-hypo__label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text-sub); }
+.jibun-hypo__text { font-size: 15px; line-height: 1.6; color: var(--text); }
+.jibun-hypo__text.is-empty { font-size: 13px; color: var(--text-sub); }
+.jibun-hypo__evi { font-size: 12px; line-height: 1.6; color: var(--text-sub); }
+.jibun-hypo--edit .modal-card__input, .jibun-hypo--edit .jibun-sheet__text { background: var(--bubble); }
+.jibun-hypo--static { margin: 8px 0; }
+.jibun-hypo .segmented { background: var(--divider); }
+.jibun-hypo .segmented__item:disabled { opacity: 0.4; }
+
+.jibun-btn--start { margin: 0 0 8px; min-height: 48px; font-size: 16px; }
+
+.jibun-log { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 4px; border-bottom: 1px solid var(--divider); font-size: 14px; line-height: 1.6; text-align: left; color: var(--text); }
+.jibun-log:last-child { border-bottom: none; }
+.jibun-meta--gap { margin: 10px 0 4px; }
+.jibun-meta--block { display: block; }
+.jibun-row--nowrap { flex-wrap: nowrap; }
+.jibun-row--nowrap input { flex: 1; min-width: 0; margin: 0; font-size: 16px; }
+.jibun-link--chip { width: auto; }
+
+.jibun-session { border: 1.5px solid var(--accent); margin-top: 0; }
+.jibun-session.is-wrap { background: var(--accent-soft); }
+.jibun-session__top { display: flex; align-items: baseline; gap: 10px; }
+.jibun-session__top b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.jibun-session__top span { font-size: 13px; font-weight: 700; color: var(--accent); }
+.jibun-session__bar { height: 6px; margin: 8px 0; border-radius: 3px; background: var(--divider); overflow: hidden; }
+.jibun-session__bar i { display: block; height: 100%; background: var(--accent); }
+.jibun-session__q { margin: 0 0 10px; font-size: 14px; line-height: 1.6; }
+
+.jibun-month { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 0; }
+.jibun-month b { font-size: 15px; }
+.jibun-month button { width: 44px; height: 40px; font-size: 22px; color: var(--text); }
+.jibun-month button:disabled { opacity: 0.25; }
+
+.jibun-change { display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left; border-left: 4px solid var(--theme, var(--divider)); }
+.jibun-change__q { font-size: 15px; font-weight: 700; line-height: 1.55; }
+.jibun-change__before { font-size: 13px; line-height: 1.55; color: var(--text-sub); }
+.jibun-change__now { font-size: 15px; line-height: 1.6; padding: 8px 10px; border-radius: 8px; background: var(--bg-notes); }
+.jibun-change__line { font-size: 13px; line-height: 1.6; }
+.jibun-change__sub { color: var(--text-sub); }
+
+.jibun-inv-start { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; margin-top: 18px; }
+.jibun-inv-start span { font-size: 13px; color: var(--text-sub); }
+.jibun-inv__q { margin: 8px 0 0; font-size: 16px; line-height: 1.6; }
+
+.jibun-alert { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--accent-soft); font-size: 13px; font-weight: 700; }

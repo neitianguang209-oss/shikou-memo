@@ -74,172 +74,36 @@ async function api(action, args = {}) {
   return res.json();
 }
 
+export function reviewInsight(id, verdict, statement) {
+  return api('review_insight', { id, verdict, statement });
+}
+
 export function loadAll() {
   return api('load');
 }
 
-export function addQuestion(question, theme) {
-  return api('add_question', { question, theme });
+export function addQuestion(question, theme, status) {
+  return api('add_question', { question, theme, status });
 }
 
 export function updateQuestion(id, patch) {
   return api('update_question', { id, ...patch });
 }
 
-export function claudePrompt(q) {
-  return `今日の問い「${q.question}」(テーマ:${q.theme})について話そう。自分を知るトークで、聞き役として1つずつ深掘りして。私が「バイバイ」と言ったら、確認なしで保存してまとめて終わりにして。`;
-}
-
-export function claudeResumePrompt(t) {
-  return `前回途中だった「${t.question || t.title}」(テーマ:${t.theme})の続きを話そう。自分を知るトークで、前回の続きから1つずつ深掘りして。私が「バイバイ」と言ったら、確認なしで保存してまとめて終わりにして。`;
-}
-
-// ---- ChatGPT とつなぐ ----
-// 無料版ChatGPTはデータベースを読めないので、頼み文に「今の考え(短いid つき)」と途中の中身を入れて渡し、
-// 最後に決まった形の「記録のかたまり」を出してもらう。それをこのアプリに貼ると、jibun_api の import_talk が
-// Claudeで話したときと同じ表(話した記録・気づき・問い)に入れる。Claudeに貼っても同じように保存される。
-
 export const RECORD_START = '【じぶんトークの記録】';
 export const RECORD_END = '【ここまで】';
 
-// 気づきの短いid(uuid の頭6文字)。ChatGPTはこれで「同じ/変わった」を指す
+// 気づきの短いid(uuid の頭6文字)。AIはこれで「同じ/変わった」を指す
 export function shortId(id) {
   return (id || '').slice(0, 6);
 }
 
-function currentInsights(insights, theme) {
-  return (insights || [])
-    .filter((i) => i.theme === theme && (i.status === '今の考え' || i.status === '未解決'))
-    .sort((a, b) => (b.confidence || 1) - (a.confidence || 1) || (b.last_confirmed || '').localeCompare(a.last_confirmed || ''))
-    .slice(0, 45);
-}
-
-const FENCE = '```';
-
-// ChatGPT用の指示文(ChatGPTの「カスタム指示」に1回貼っておく。1500字以内)。
-// 「じぶんトーク」で始まるメッセージのときだけ働くので、ほかの会話には影響しない。
-// これを入れておけば、アプリから開くときの頼み文は「じぶんトーク＋問い」だけの短い文で済む
-// (長い文は ChatGPT のリンクに入りきらず、開いても文章が入らなかった)
-export const CHATGPT_INSTRUCTIONS = `【じぶんトーク】
-メッセージが「じぶんトーク」で始まるときだけ、以下のルールで動く。ほかの会話では使わない。
-・私の「自分を知るトーク」の聞き役。質問は1回に1つ、短く。講義や長い箇条書きはしない。
-・渡された問いに、「なぜ?」「具体的には?」「そのとき何を感じた?」で1〜2段ずつ深掘りする。5〜10往復が目安。経験談が出たら、数字・時期・自分の行動を1つ聞く。
-・私の言葉を言い換えて決めつけない。まとめるときは「〜ってこと?」と確かめる。恋愛・家族は話したい深さまで。
-・答えが出たと感じたら「これで答えが出た感じ?」と1回だけ聞く。
-・「バイバイ」「おわり」と言われたら、質問も確認もせず、下の記録をコードブロック1つで出して終わる。「いったんここまで」なら状態を途中にする。私が言っていないことは書かない。項目名と | は変えない。
-【記録の形】
-【じぶんトークの記録】
-日付: YYYY-MM-DD
-問い: (渡された問い)
-問いのid: (渡されたid。無ければなし)
-テーマ: (渡されたテーマ)
-状態: 完了 か 途中
-答え: 出た か まだ
-今日の一言: 今日分かった自分を40字まで
-具体的には: 流れと結論を3〜5文
-私の言葉: 「そのままの言い回し」を2〜4個
-新しく出た話: 新しい経験・事実。無ければ なし
-キーワード: 読点区切りで2〜4個
-気づき:
-- 新しい | 種類 | 文
-新しく生まれた問い:
-- 問い(無ければ なし)
-次に聞くこと: 1つ
-【ここまで】
-種類は 一言の自分/価値観/幸福観/強み/弱み/動き方のクセ/感情のクセ/やりたいこと/避けたいこと/企業選びの軸/働き方の条件/キャリア仮説/恋愛観/人との関わり方 から選ぶ。`;
-
-function clip(s, n) {
-  const t = (s || '').replace(/\s+/g, ' ').trim();
-  return t.length > n ? t.slice(0, n) + '…' : t;
-}
-
-// ChatGPTを開くときの短い頼み文(指示文はChatGPT側に入っている前提)。
-// 長いとリンクに入りきらないので、問い・id・テーマ(と、途中なら要点)だけ
-export function chatgptPrompt({ q, talk }) {
-  const theme = (q && q.theme) || (talk && talk.theme) || '人生観';
-  const question = (q && q.question) || (talk && (talk.question || talk.title)) || '';
-  const qid = (q && q.id) || (talk && talk.question_id) || 'なし';
-  const resume = talk
-    ? `\n前回の途中: ${clip(talk.summary, 220)}\n次に聞くこと: ${clip(talk.resume_note, 80) || 'なし'}`
-    : '';
-  return `じぶんトーク
-問い: ${question}
-問いのid: ${qid}
-テーマ: ${theme}${resume}
-この問いから始めてください。`;
-}
-
-// 指示文をChatGPTに入れていないとき用の、全部入りの長い頼み文(今の考え・書き方つき)。
-// 長いのでリンクには入れず、コピーして貼ってもらう
-export function chatgptLongPrompt({ q, talk, insights, talks }) {
-  const theme = (q && q.theme) || (talk && talk.theme) || '人生観';
-  const question = (q && q.question) || (talk && (talk.question || talk.title)) || '';
-  const qid = (q && q.id) || (talk && talk.question_id) || 'なし';
-  const now = currentInsights(insights, theme)
-    .map((i) => `- #${shortId(i.id)} ${i.kind}: ${i.statement}`)
-    .join('\n');
-  const recent = (talks || [])
-    .filter((t) => t.theme === theme && t.status === '完了' && t.headline)
-    .slice(0, 3)
-    .map((t) => `- ${shortDate(t.talked_on)} ${t.headline}`)
-    .join('\n');
-  const resume = talk ? `
-
-■ 前回の途中まで(${talk.source === 'ChatGPT' ? 'ChatGPT' : 'Claude'}で話した分)
-${talk.summary || ''}
-${(talk.quotes || []).length ? '私の言葉: ' + talk.quotes.map((x) => `「${x}」`).join('') + '\n' : ''}次に聞くこと: ${talk.resume_note || '(なし)'}
-前回の続きから始めて、前回の中身は「前回は〜ってところまで話したね」と一言だけ触れてください。記録の「具体的には」は前回の分も合わせて書いてください。` : '';
-  return `あなたは私の「自分を知るトーク」の聞き役です。日本語で話してください。
-
-■ 今日の問い
-「${question}」(テーマ: ${theme})${resume}
-
-■ 話し方
-- 質問は1回に1つ。短く話す。講義や長い箇条書きはしない
-- 答えに「なぜ?」「具体的には?」「そのとき何を感じた?」で1〜2段だけ深掘りする。5〜10往復が目安
-- 私の言葉を言い換えて決めつけない。まとめるときは「〜ってこと?」と確かめる
-- 下の「今の考え」と食い違ったら、責めずにそのまま見せる(「前は『〜』だったけど、今は少し違う?」)。結論を急がせない
-- 新しい経験談が出たら、数字・時期・自分の行動を1つだけ追加で聞く(就活のエピソードになるので)
-- 恋愛・家族の話は私が話したい深さまで
-- 答えがはっきり出たと感じたら「これで答えが出た感じ?」と1回だけ聞いてよい
-
-■ 私の今の考え(${theme}。# のあとは記録に使うid)
-${now || '(まだなし)'}
-${recent ? `\n■ 最近わかったこと\n${recent}\n` : ''}
-■ 終わり方
-私が「バイバイ」「おわり」と言ったら、質問も確認もせずに、下の形の「記録のかたまり」を1つだけ、コードブロック(${FENCE})の中に入れて出して終わってください。
-「いったんここまで」「続きはまた今度」と言ったら、状態を「途中」にして同じ形で出してください。
-記録には私が言っていないことを書かないでください。項目名と区切りの | は変えないでください。
-
-${FENCE}
-${RECORD_START}
-日付: (今日の日付 YYYY-MM-DD)
-問い: ${question}
-問いのid: ${qid}
-テーマ: ${theme}
-状態: 完了 か 途中
-答え: 出た か まだ(この問いはもう話さなくていいくらい答えが出たら 出た)
-今日の一言: 今日の話で分かった自分を1文(40字まで。例: 人に認められるより、自分で納得できることに幸せを感じる人)
-具体的には: 流れと結論を3〜5文
-私の言葉: 「そのままの言い回し」を2〜4個
-新しく出た話: 新しい経験・事実(数字や時期も)。無ければ なし
-キーワード: 話に出た話題を2〜4個、読点で区切る
-気づき:
-- 新しい | 種類 | 文
-- 同じ | #id
-- 強く同じ | #id
-- 変わった | #id | 種類 | 新しい文 | 何がどう変わったか・きっかけ
-- 取り下げ | #id | 理由
-新しく生まれた問い:
-- 問い(無ければ なし)
-次に聞くこと: 途中なら次に聞くことを1つ。完了なら次に深掘りしたい問い
-${RECORD_END}
-${FENCE}
-(気づきは今日の話ではっきり言えたものだけ1件1行。種類は 一言の自分/価値観/幸福観/強み/弱み/動き方のクセ/感情のクセ/やりたいこと/避けたいこと/企業選びの軸/働き方の条件/キャリア仮説/恋愛観/人との関わり方/問い のどれか。上の「今の考え」と同じことを言ったら「同じ」、言い切ったら「強く同じ」、前と変わったら「変わった」。使わない行は消してください)`;
-}
+export const CERTAINTY = ['', 'なんとなく', 'かなり確か', '確信'];
 
 // 見出し(全角コロン・** の太字・行頭の - などのゆれを許す)
 const FIELDS = {
+  '仮説': 'hypo', '今の仮説': 'hypo', '確信度': 'certainty', 'レンズ': 'lens',
+  '根拠': 'evidence', '根拠になった出来事': 'evidence', '反証': 'counter', '反証・違和感': 'counter', '次に掘る問い': 'next',
   '日付': 'date', '問い': 'question', '問いのid': 'qid', 'テーマ': 'theme', '状態': 'status', '答え': 'answer',
   '今日の一言': 'headline', '具体的には': 'summary', '私の言葉': 'quotes',
   '新しく出た話': 'material', 'キーワード': 'topics', '気づき': 'insights', '気づきの候補': 'insights',
@@ -251,7 +115,8 @@ const OPS = { '新しい': 'new', '新規': 'new', '同じ': 'same', '強く同�
 const KINDS = ['一言の自分', '価値観', '幸福観', '強み', '弱み', '動き方のクセ', '感情のクセ', 'やりたいこと', '避けたいこと', '企業選びの軸', '働き方の条件', 'キャリア仮説', '恋愛観', '人との関わり方', '問い'];
 
 export function hasRecord(text) {
-  return (text || '').includes(RECORD_START) || /今日の一言\s*[:：]/.test(text || '');
+  const t = text || '';
+  return t.includes(RECORD_START) || /今日の一言\s*[:：]/.test(t) || (/仮説(\*\*)?\s*[:：]/.test(t) && /根拠/.test(t));
 }
 
 function hash(str) {
@@ -291,9 +156,13 @@ export function parseRecord(text) {
   }
   const one = (k) => clean((raw[k] || []).join(' '));
   const val = (k) => { const v = one(k); return NONE.test(v) ? '' : v; };
-  const headline = val('headline');
+  const hypothesis = val('hypo');
+  const headline = val('headline') || hypothesis;
   const summary = (raw.summary || []).map(clean).join('\n').trim();
   if (!headline && !summary) return null;
+  const ct = one('certainty');
+  // 書き方の見本(3つ並び)がそのまま返ってきたら「なんとなく」
+  const certainty = !hypothesis ? null : /[/／]/.test(ct) ? 1 : /確信/.test(ct) ? 3 : /かなり/.test(ct) ? 2 : 1;
 
   const th = one('theme');
   const theme = THEMES.map((t) => t.name).find((t) => th.includes(t))
@@ -332,7 +201,12 @@ export function parseRecord(text) {
   const date = (one('date').match(/\d{4}-\d{2}-\d{2}/) || [''])[0];
   const next = val('next');
   return {
-    import_key: hash([one('question'), date, status, headline, summary].join('|')),
+    import_key: hash([one('question'), date, status, headline, summary, val('evidence')].join('|')),
+    hypothesis,
+    certainty,
+    evidence: val('evidence'),
+    counter: val('counter'),
+    lens: val('lens'),
     talked_on: date,
     question: val('question'),
     question_id: qid,
@@ -360,22 +234,32 @@ export function importTalk(record) {
 // サーバー側の関数 jibun-structure(Gemini)が「話した記録」の形に直して返す。保存は確認のあと
 const STRUCTURE_URL = 'https://gzayrjlhruhvklsidraw.supabase.co/functions/v1/jibun-structure';
 
-export async function structureText(text) {
+async function callStructure(body) {
   const res = await fetch(STRUCTURE_URL, {
     method: 'POST',
     headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key: readKey(), text }),
+    body: JSON.stringify({ key: readKey(), ...body }),
   });
   if (!res.ok) {
     let err = '';
     try { err = (await res.json()).error || ''; } catch (e) { /* 本文なし */ }
     throw new Error(err === 'bad key' ? 'bad key' : err === 'too long' ? 'too long' : 'ai failed');
   }
-  const j = await res.json();
+  return res.json();
+}
+
+export async function structureText(text) {
+  const j = await callStructure({ text });
   return (j.records || []).map((r) => ({
     ...r,
     import_key: hash([r.question, r.talked_on, r.status, r.headline, r.summary].join('|')),
   }));
+}
+
+// 過去の記録から、まだ言葉になっていない問いの候補を出してもらう
+export async function suggestQuestions() {
+  const j = await callStructure({ mode: 'suggest' });
+  return j.suggestions || [];
 }
 
 // 文字を2文字ずつに割って重なりを見る(言い回しが少し違うだけの同じ気づきを見つける)
@@ -410,19 +294,6 @@ export function markSimilar(rec, insights) {
       return best ? { ...x, similar: best } : x;
     }),
   };
-}
-
-// ChatGPTで話しに行った問い(この端末で覚えておき、戻ってきたら「取りこむ」を出す)
-const PENDING_STORE = 'jibun-note:gpt-pending';
-export function readPending() {
-  try {
-    const p = JSON.parse(localStorage.getItem(PENDING_STORE) || 'null');
-    // 2日たったものは忘れる
-    return p && Date.now() - p.at < 2 * 86400000 ? p : null;
-  } catch (e) { return null; }
-}
-export function writePending(p) {
-  try { p ? localStorage.setItem(PENDING_STORE, JSON.stringify(p)) : localStorage.removeItem(PENDING_STORE); } catch (e) { /* なくても動く */ }
 }
 
 // ---- じぶん像(気づきのまとめ) ----

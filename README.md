@@ -58,4 +58,13 @@ PWA は HTTPS 配信が必須のため、iPhone実機で使うには公開が必
 - 画面は `src/components/JibunView.js`、データの出入りは `src/lib/jibun.js`(Supabase の関数 `jibun_api` だけを通す。表は anon から閉じている)
 - 合言葉は端末の localStorage `jibun-note:key`(就活アプリと共通)。`#jibun&k=合言葉` 付きのリンクで開くと保存されて「じぶん」が開く
 - ホームのメモを長押し →「問いにする」で、メモの文を問いの下書きにできる
+
+### v3.0.0(2026-11-28)20分の自己分析
+
+- タブは 問い / ふりかえり / じぶん像。機能は問いを開いたカードにまとめ、くわしい中身は折りたたむ。**見た目と操作を複雑にしないのが絶対条件**
+- 問いは仮説・確信度・根拠の出来事・関連ワードを持つ。出来事がない仮説は「なんとなく」まで(DB のトリガー `jibun_question_hypo` が守り、移り変わりを `hypo_log` に残す)
+- 「20分で掘る」: 進め方の指示文(`src/lib/jibunSession.js` の `sessionPrompt`)を関連する自分の情報ごとコピーしてAIを開き、タイマーを出す。締めの固定の形は 仮説/根拠/反証/次に掘る問い。貼ると `jibun_import_talk` が問いに振り分ける
+- ふりかえりは月ごとの差分だけを問い単位のカードで(`monthReview`)。月1の棚卸し(`review_insight`、卒業した考えは status='卒業')と「来月の問い」(`month_of`)
+- 違和感メモは `jibun_questions.status='違和感'`、保留は '保留'、卒業した問いは '決着'
+- 同じ形の手順が claude.ai のスキル `jibun-talk` にもある。進め方を変えたら両方直す
 - 旧 `jibun-note` の公開ページは `../shikou-memo/#jibun` へ飛ばすだけ

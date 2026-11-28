@@ -8,7 +8,7 @@ import { syncNow } from '../lib/sync.js';
 import { ACCENTS, readAccent, writeAccent } from '../lib/prefs.js';
 
 const html = htm.bind(React.createElement);
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '3.0.0';
 const LAST_EXPORT_KEY = 'shikou-memo:lastExportAt';
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
